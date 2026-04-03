@@ -156,7 +156,6 @@ interface GrainientProps {
   className?: string;
 }
 
-
 export default function Grainient({
   timeSpeed = 0.2,
   colorBalance = 0.0,
@@ -165,21 +164,21 @@ export default function Grainient({
   warpSpeed = 1.5,
   warpAmplitude = 40.0,
   blendAngle = 0.0,
-  blendSoftness = 0.05,
+  blendSoftness = 0.35,
   rotationAmount = 300.0,
-  noiseScale = 2.0,
-  grainAmount = 0.06,
+  noiseScale = 1.25,
+  grainAmount = 0.04,
   grainScale = 2.0,
   grainAnimated = true,
-  contrast = 1.2,
+  contrast = 1.05,
   gamma = 1.0,
-  saturation = 1.0,
+  saturation = 1.1,
   centerX = 0.0,
-  centerY = 0.0,
-  zoom = 0.9,
-  color1 = "#252525",
-  color2 = "#252525",
-  color3 = "#8DA3B9",
+  centerY = -0.05,
+  zoom = 1.5,
+  color1 = "#FFB347",
+  color2 = "#FF7A18",
+  color3 = "#2A130A",
   className = "",
 }: GrainientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -273,10 +272,28 @@ export default function Grainient({
       }
     };
   }, [
-    timeSpeed, colorBalance, warpStrength, warpFrequency, warpSpeed,
-    warpAmplitude, blendAngle, blendSoftness, rotationAmount, noiseScale,
-    grainAmount, grainScale, grainAnimated, contrast, gamma, saturation,
-    centerX, centerY, zoom, color1, color2, color3,
+    timeSpeed,
+    colorBalance,
+    warpStrength,
+    warpFrequency,
+    warpSpeed,
+    warpAmplitude,
+    blendAngle,
+    blendSoftness,
+    rotationAmount,
+    noiseScale,
+    grainAmount,
+    grainScale,
+    grainAnimated,
+    contrast,
+    gamma,
+    saturation,
+    centerX,
+    centerY,
+    zoom,
+    color1,
+    color2,
+    color3,
   ]);
 
   return (

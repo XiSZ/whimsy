@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import GrainientLoader from "@/components/background/useGrainient";
 
 export const metadata: Metadata = {
-  title: "whimsy",
+  title: "xisz.dev",
   description: "world's worst startpage",
   icons: {
     icon: "/favicon.ico",

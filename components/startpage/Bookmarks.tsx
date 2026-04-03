@@ -15,17 +15,17 @@ const categories: BookmarkCategory[] = [
   {
     title: "Daily",
     links: [
-      { label: "Instagram", url: "https://instagram.com/" },
+      { label: "Twitch", url: "https://Twitch.tv/" },
       { label: "YouTube", url: "https://youtube.com/" },
       { label: "GitHub", url: "https://github.com/" },
     ],
   },
   {
-    title: "Reddit",
+    title: "Network",
     links: [
-      { label: "/r/unixporn", url: "https://old.reddit.com/r/unixporn" },
-      { label: "/r/unixart", url: "https://old.reddit.com/r/unixart" },
-      { label: "/r/linux", url: "https://old.reddit.com/r/linux" },
+      { label: "FRITZ!Box", url: "http://192.168.178.1/" },
+      { label: "FRITZ!Repeater", url: "http://192.168.178.2/" },
+      { label: "MyFRITZ!Net", url: "https://www.myfritz.net/devices/#/" },
     ],
   },
   {
@@ -37,18 +37,19 @@ const categories: BookmarkCategory[] = [
     ],
   },
   {
-    title: "Practice",
+    title: "AI",
     links: [
-      { label: "HackerOne", url: "https://www.hackerone.com/" },
-      { label: "Leetcode", url: "https://leetcode.com/" },
+      { label: "Claude", url: "https://claude.ai/" },
+      { label: "Gemini", url: "https://gemini.google.com/" },
+      { label: "Perplexity", url: "https://www.perplexity.ai/" },
     ],
   },
   {
-    title: "Nix",
+    title: "Tools",
     links: [
-      { label: "MyNixOS", url: "https://mynixos.com/" },
-      { label: "Nixpkgs", url: "https://search.nixos.org/packages" },
-      { label: "Noogle", url: "https://noogle.dev/" },
+      { label: "iLovePDF", url: "https://www.ilovepdf.com/" },
+      { label: "TinyWOW", url: "https://tinywow.com/" },
+      { label: "Ninite", url: "https://ninite.com/" },
     ],
   },
 ];
@@ -57,11 +58,11 @@ const STAGGER_MS = 60;
 
 export default function Bookmarks() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+    <div className="flex flex-wrap justify-center gap-4 w-full">
       {categories.map((category, i) => (
         <Card
           key={category.title}
-          className="animate-stagger-in min-h-[180px]"
+          className="animate-stagger-in min-h-[180px] w-[180px]"
           style={{ animationDelay: `${i * STAGGER_MS}ms` }}
         >
           <div className="text-lg text-paradise-300 mb-1 text-center md:text-left">
