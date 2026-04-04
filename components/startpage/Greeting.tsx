@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { APP_TIME_ZONE } from "@/config/time";
 
 function getGreeting(): string {
-  const hours = Number(
-    new Intl.DateTimeFormat("de-DE", {
-      hour: "2-digit",
-      hourCycle: "h23",
-      timeZone: APP_TIME_ZONE,
-    }).format(new Date()),
-  );
+  const parts = new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    timeZone: APP_TIME_ZONE,
+  }).formatToParts(new Date());
+
+  const hours = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
 
   if (hours < 12) return "Good morning";
   if (hours < 18) return "Good afternoon";
