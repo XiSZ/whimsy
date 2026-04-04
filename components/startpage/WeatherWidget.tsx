@@ -100,12 +100,14 @@ export default function WeatherWidget() {
           ? data.daily.temperature_2m_max
           : [];
 
-        const forecast: ForecastDay[] = dates.slice(0, 3).map((date: string, index: number) => ({
-          date,
-          weatherCode: Number(codes[index] ?? 0),
-          tempMin: Number(mins[index] ?? 0),
-          tempMax: Number(maxs[index] ?? 0),
-        }));
+        const forecast: ForecastDay[] = dates
+          .slice(0, 3)
+          .map((date: string, index: number) => ({
+            date,
+            weatherCode: Number(codes[index] ?? 0),
+            tempMin: Number(mins[index] ?? 0),
+            tempMax: Number(maxs[index] ?? 0),
+          }));
 
         setWeather({
           temperature: Number(data?.current?.temperature_2m ?? 0),
@@ -173,9 +175,16 @@ export default function WeatherWidget() {
       ) : (
         <div className="mt-2 grid gap-1">
           {weather.forecast.map((day) => (
-            <div key={day.date} className="grid grid-cols-[44px_1fr_70px] items-center text-xs">
-              <div className="text-paradise-200/90">{formatWeekday(day.date)}</div>
-              <div className="text-paradise-100/90">{weatherCodeToLabel(day.weatherCode)}</div>
+            <div
+              key={day.date}
+              className="grid grid-cols-[44px_1fr_70px] items-center text-xs"
+            >
+              <div className="text-paradise-200/90">
+                {formatWeekday(day.date)}
+              </div>
+              <div className="text-paradise-100/90">
+                {weatherCodeToLabel(day.weatherCode)}
+              </div>
               <div className="text-right tabular-nums text-paradise-200/80">
                 {Math.round(day.tempMin)}C/{Math.round(day.tempMax)}C
               </div>
