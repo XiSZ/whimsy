@@ -1,6 +1,7 @@
 import Greeting from "@/components/startpage/Greeting";
 import SearchBar from "@/components/startpage/SearchBar";
 import Bookmarks from "@/components/startpage/Bookmarks";
+import ProgressBars from "@/components/startpage/ProgressBars";
 import CurrentTime from "@/components/time/CurrentTime";
 
 export default function Page() {
@@ -21,6 +22,8 @@ export default function Page() {
         <div className="opacity-0 animate-[fadeIn_0.5s_ease-out_0.4s_forwards] w-full">
           <Bookmarks />
         </div>
+
+        <ProgressBars />
       </div>
     </>
   );
