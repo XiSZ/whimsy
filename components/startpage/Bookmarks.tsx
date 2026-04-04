@@ -80,7 +80,7 @@ export default function Bookmarks() {
                   <FaAngleRight className="w-3 h-3" />
                 </span>
 
-                <span className="transition-colors transition-transform duration-200 transform group-hover:text-paradise-300 md:group-hover:translate-x-3 text-neutral-300">
+                <span className="transition-colors transition-transform duration-200 transform group-hover:text-paradise-200 md:group-hover:translate-x-3 text-paradise-100/85">
                   {link.label}
                 </span>
               </a>

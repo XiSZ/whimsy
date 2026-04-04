@@ -5,9 +5,9 @@
   --font-mono: "IBM Plex Mono";
 
   /* Accent (blue) */
-  --color-paradise-100: #e8e3e3;
-  --color-paradise-200: #b8c5d4;
-  --color-paradise-300: #8da3b9;
+  --color-paradise-100: #fff4e2;
+  --color-paradise-200: #ffe4bf;
+  --color-paradise-300: #ffcf94;
   --color-paradise-400: #7b93aa;
   --color-paradise-500: #6a8299;
   --color-paradise-600: #5a7088;
@@ -16,7 +16,7 @@
   --color-paradise-900: #1e2a35;
 
   /* Other colors */
-  --color-paradise-fg: #e8e3e3;
+  --color-paradise-fg: #fff0d8;
   --color-paradise-bg: #2a130a;
   --color-paradise-red: #b66467;
   --color-paradise-green: #8c977d;

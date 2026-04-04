@@ -64,7 +64,7 @@ export default function CurrentTime({
   return (
     <div
       className={clsx(
-        "flex items-center gap-2 font-sans text-paradise-200",
+        "flex items-center gap-2 font-sans text-paradise-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]",
         className,
       )}
     >
@@ -74,7 +74,7 @@ export default function CurrentTime({
       <div className="flex gap-1 opacity-0 animate-[fadeIn_0.5s_ease-out_0.25s_forwards]">
         <AnimatedCounter
           value={time.hours}
-          className="font-mono text-paradise-300"
+          className="font-mono text-paradise-200"
           decimalPrecision={0}
           padNumber={2}
           showColorsWhenValueChanges={false}
@@ -82,7 +82,7 @@ export default function CurrentTime({
         :
         <AnimatedCounter
           value={time.minutes}
-          className="font-mono text-paradise-300"
+          className="font-mono text-paradise-200"
           decimalPrecision={0}
           padNumber={2}
           showColorsWhenValueChanges={false}
@@ -90,7 +90,7 @@ export default function CurrentTime({
         :
         <AnimatedCounter
           value={time.seconds}
-          className="font-mono text-paradise-300"
+          className="font-mono text-paradise-200"
           decimalPrecision={0}
           padNumber={2}
           showColorsWhenValueChanges={false}
@@ -100,7 +100,7 @@ export default function CurrentTime({
             .
             <AnimatedCounter
               value={time.milliseconds}
-              className="font-mono text-paradise-300"
+              className="font-mono text-paradise-200"
               decimalPrecision={msPrecision}
               padNumber={3}
               showColorsWhenValueChanges={false}

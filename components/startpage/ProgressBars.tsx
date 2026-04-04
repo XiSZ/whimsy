@@ -122,7 +122,7 @@ export default function ProgressBars() {
   }, []);
 
   return (
-    <div className="w-full max-w-xl rounded-xl border border-[#424242]/40 bg-[#1E1E1E]/40 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
+    <div className="w-full max-w-xl rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="grid gap-1.5">
         {items.map((item) => (
           <div

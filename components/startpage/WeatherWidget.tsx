@@ -37,6 +37,9 @@ const WEATHER_COORDS = {
 };
 
 const WEATHER_LABEL = process.env.NEXT_PUBLIC_WEATHER_LABEL;
+const WEATHER_REFRESH_MINUTES = Number(
+  process.env.NEXT_PUBLIC_WEATHER_REFRESH_MINUTES,
+);
 
 export default function WeatherWidget() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -46,6 +49,11 @@ export default function WeatherWidget() {
     Number.isFinite(WEATHER_COORDS.lat) &&
     Number.isFinite(WEATHER_COORDS.lon) &&
     Boolean(WEATHER_LABEL);
+
+  const refreshIntervalMs =
+    Number.isFinite(WEATHER_REFRESH_MINUTES) && WEATHER_REFRESH_MINUTES >= 10
+      ? WEATHER_REFRESH_MINUTES * 60 * 1000
+      : 30 * 60 * 1000;
 
   const endpoint = useMemo(
     () =>
@@ -79,13 +87,13 @@ export default function WeatherWidget() {
     };
 
     update();
-    const interval = setInterval(update, 15 * 60 * 1000);
+    const interval = setInterval(update, refreshIntervalMs);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [endpoint, hasValidConfig]);
+  }, [endpoint, hasValidConfig, refreshIntervalMs]);
 
   if (!hasValidConfig || hasError || !weather) return null;
 
@@ -93,7 +101,7 @@ export default function WeatherWidget() {
   const weatherIcon = weatherCodeToIcon(weather.weatherCode);
 
   return (
-    <div className="fixed top-4 right-4 z-20 w-[220px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#424242]/50 bg-[#1E1E1E]/45 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
+    <div className="fixed top-4 right-4 z-20 w-[220px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="text-[11px] uppercase tracking-wide text-paradise-200/75">
         {WEATHER_LABEL}
       </div>

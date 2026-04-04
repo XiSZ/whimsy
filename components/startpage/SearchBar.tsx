@@ -63,8 +63,8 @@ export default function SearchBar() {
           autoFocus
           className="
             w-full px-4 py-3 rounded-xl
-            bg-[#1E1E1E]/55
-            border border-[#424242]/40
+            bg-[#161616]/62
+            border border-[#2d2d2d]/70
             text-paradise-fg
             backdrop-blur-lg backdrop-saturate-150
             font-sans
@@ -72,14 +72,14 @@ export default function SearchBar() {
             transition-all duration-300 ease-out
             hover:border-paradise-400/40
             focus:border-paradise-400
-            focus:bg-[#1E1E1E]/70
+            focus:bg-[#111111]/72
             focus:shadow-[0_0_0_1px_rgba(141,163,185,0.3),0_0_24px_rgba(141,163,185,0.15)]
           "
         />
 
         <span
           className={clsx(
-            "absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none transition-opacity duration-300",
+            "absolute left-4 top-1/2 -translate-y-1/2 text-paradise-100/50 pointer-events-none transition-opacity duration-300",
             value.length > 0 ? "opacity-0" : "opacity-100",
           )}
         >
@@ -100,7 +100,7 @@ export default function SearchBar() {
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-all duration-300 cursor-pointer",
                 isActive
                   ? "bg-paradise-300 text-paradise-bg border-paradise-300 font-medium"
-                  : "bg-[#1E1E1E]/55 border-[#424242]/50 text-neutral-300 hover:border-paradise-100/30 hover:text-paradise-200 backdrop-blur-lg backdrop-saturate-150",
+                  : "bg-[#161616]/62 border-[#2d2d2d]/70 text-paradise-100/85 hover:border-paradise-100/30 hover:text-paradise-100 backdrop-blur-lg backdrop-saturate-150",
               )}
             >
               <Icon className="text-xs" />
