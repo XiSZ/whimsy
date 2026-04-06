@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { IconType } from "react-icons/lib";
+import {
+  WiCloud,
+  WiDaySunny,
+  WiFog,
+  WiRain,
+  WiSnow,
+  WiThunderstorm,
+} from "react-icons/wi";
 
 interface ForecastDay {
   date: string;
@@ -17,26 +26,92 @@ interface WeatherData {
   forecast: ForecastDay[];
 }
 
-function weatherCodeToLabel(code: number): string {
-  if (code === 0) return "Clear";
-  if (code <= 3) return "Cloudy";
-  if (code <= 48) return "Fog";
-  if (code <= 67) return "Rain";
-  if (code <= 77) return "Snow";
-  if (code <= 82) return "Showers";
-  if (code <= 99) return "Storm";
-  return "Weather";
+interface WeatherPresentation {
+  label: string;
+  description: string;
+  Icon: IconType;
+  accentClassName: string;
 }
 
-function weatherCodeToIcon(code: number): string {
-  if (code === 0) return "sun";
-  if (code <= 3) return "cloud";
-  if (code <= 48) return "fog";
-  if (code <= 67) return "rain";
-  if (code <= 77) return "snow";
-  if (code <= 82) return "rain";
-  if (code <= 99) return "storm";
-  return "cloud";
+function weatherCodeToPresentation(code: number): WeatherPresentation {
+  if (code === 0) {
+    return {
+      label: "Clear",
+      description: "Bright, open skies with strong visibility",
+      Icon: WiDaySunny,
+      accentClassName: "text-amber-200",
+    };
+  }
+
+  if (code === 1) {
+    return {
+      label: "Mostly clear",
+      description: "Mostly sunny with a few passing clouds",
+      Icon: WiDaySunny,
+      accentClassName: "text-amber-200",
+    };
+  }
+
+  if (code <= 3) {
+    return {
+      label: "Cloudy",
+      description: "Grey, overcast conditions",
+      Icon: WiCloud,
+      accentClassName: "text-slate-200",
+    };
+  }
+
+  if (code <= 48) {
+    return {
+      label: "Fog",
+      description: "Hazy air and reduced visibility",
+      Icon: WiFog,
+      accentClassName: "text-slate-300",
+    };
+  }
+
+  if (code <= 67) {
+    return {
+      label: "Rain",
+      description: "Steady rain is likely through the day",
+      Icon: WiRain,
+      accentClassName: "text-sky-200",
+    };
+  }
+
+  if (code <= 77) {
+    return {
+      label: "Snow",
+      description: "Cold, wintry conditions with snowfall",
+      Icon: WiSnow,
+      accentClassName: "text-cyan-100",
+    };
+  }
+
+  if (code <= 82) {
+    return {
+      label: "Showers",
+      description: "Short, scattered bursts of rain",
+      Icon: WiRain,
+      accentClassName: "text-sky-200",
+    };
+  }
+
+  if (code <= 99) {
+    return {
+      label: "Storm",
+      description: "Thunderstorms and heavier weather activity",
+      Icon: WiThunderstorm,
+      accentClassName: "text-violet-200",
+    };
+  }
+
+  return {
+    label: "Weather",
+    description: "Current conditions at a glance",
+    Icon: WiCloud,
+    accentClassName: "text-paradise-200",
+  };
 }
 
 function formatWeekday(date: string): string {
@@ -143,8 +218,7 @@ export default function WeatherWidget() {
 
   if (!hasValidConfig || hasError || !weather) return null;
 
-  const weatherLabel = weatherCodeToLabel(weather.weatherCode);
-  const weatherIcon = weatherCodeToIcon(weather.weatherCode);
+  const currentWeather = weatherCodeToPresentation(weather.weatherCode);
 
   return (
     <div className="fixed top-4 right-4 z-20 w-[240px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
@@ -159,9 +233,18 @@ export default function WeatherWidget() {
 
       {view === "daily" ? (
         <>
-          <div className="mt-1 flex items-center justify-between">
-            <div className="text-sm text-paradise-100">{weatherLabel}</div>
-            <div className="text-xs text-paradise-200/90">{weatherIcon}</div>
+          <div className="mt-1 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm text-paradise-100">
+                {currentWeather.label}
+              </div>
+              <div className="mt-0.5 text-[11px] leading-tight text-paradise-200/70">
+                {currentWeather.description}
+              </div>
+            </div>
+            <currentWeather.Icon
+              className={`mt-0.5 shrink-0 text-2xl ${currentWeather.accentClassName}`}
+            />
           </div>
           <div className="mt-1 flex items-end justify-between">
             <div className="text-xl font-semibold text-paradise-100">
@@ -175,23 +258,29 @@ export default function WeatherWidget() {
       ) : (
         <div className="mt-2 grid gap-1">
           {weather.forecast.map((day) => (
-            <div
-              key={day.date}
-              className="grid grid-cols-[44px_1fr_70px] items-center text-xs"
-            >
-              <div className="text-paradise-200/90">
-                {formatWeekday(day.date)}
-              </div>
-              <div className="text-paradise-100/90">
-                {weatherCodeToLabel(day.weatherCode)}
-              </div>
-              <div className="text-right tabular-nums text-paradise-200/80">
-                {Math.round(day.tempMin)}C/{Math.round(day.tempMax)}C
-              </div>
-            </div>
+            <ForecastRow key={day.date} day={day} />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ForecastRow({ day }: { day: ForecastDay }) {
+  const forecastWeather = weatherCodeToPresentation(day.weatherCode);
+
+  return (
+    <div className="grid grid-cols-[44px_1fr_70px] items-center text-xs">
+      <div className="text-paradise-200/90">{formatWeekday(day.date)}</div>
+      <div className="flex items-center gap-2 text-paradise-100/90">
+        <forecastWeather.Icon
+          className={`shrink-0 text-sm ${forecastWeather.accentClassName}`}
+        />
+        <span>{forecastWeather.label}</span>
+      </div>
+      <div className="text-right tabular-nums text-paradise-200/80">
+        {Math.round(day.tempMin)}C/{Math.round(day.tempMax)}C
+      </div>
     </div>
   );
 }
