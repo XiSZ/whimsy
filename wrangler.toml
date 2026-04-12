@@ -1,4 +1,12 @@
 name = "whimsy"
+account_id = "115fcc96a9083ed758e683ab88259d86"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
+
+[vars]
+NEXT_PUBLIC_TIMEZONE = "Europe/Berlin"
+NEXT_PUBLIC_WEATHER_LAT = "50.9375"
+NEXT_PUBLIC_WEATHER_LON = "6.9603"
+NEXT_PUBLIC_WEATHER_LABEL = "Cologne"
+NEXT_PUBLIC_WEATHER_REFRESH_MINUTES = "30"
