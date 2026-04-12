@@ -14,6 +14,7 @@ interface TwitchUsersResponse {
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
+const TWITCH_OAUTH_REDIRECT_URI = process.env.TWITCH_OAUTH_REDIRECT_URI;
 
 const OAUTH_STATE_COOKIE = "twitch_oauth_state";
 const COOKIE_ACCESS_TOKEN = "twitch_access_token";
@@ -94,9 +95,16 @@ export async function GET(request: NextRequest) {
   const callbackUrl = new URL(request.url);
   const code = callbackUrl.searchParams.get("code");
   const state = callbackUrl.searchParams.get("state");
+  const oauthError = callbackUrl.searchParams.get("error");
   const savedState = request.cookies.get(OAUTH_STATE_COOKIE)?.value;
 
   const redirectBase = new URL("/", request.url);
+
+  if (oauthError) {
+    return NextResponse.redirect(
+      new URL("/?twitch=oauth_failed", redirectBase),
+    );
+  }
 
   if (!code || !state || !savedState || state !== savedState) {
     return NextResponse.redirect(
@@ -105,10 +113,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const redirectUri = new URL(
-      "/api/twitch/oauth/callback",
-      request.url,
-    ).toString();
+    const redirectUri =
+      TWITCH_OAUTH_REDIRECT_URI ??
+      new URL("/api/twitch/oauth/callback", request.url).toString();
     const tokens = await exchangeCodeForTokens(code, redirectUri);
     const userId = await fetchUserId(tokens.accessToken);
 

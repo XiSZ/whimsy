@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
+const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
+const TWITCH_OAUTH_REDIRECT_URI = process.env.TWITCH_OAUTH_REDIRECT_URI;
 const OAUTH_STATE_COOKIE = "twitch_oauth_state";
 
 export const runtime = "edge";
 
 export async function GET(request: NextRequest) {
-  if (!TWITCH_CLIENT_ID) {
+  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
     return NextResponse.redirect(
       new URL("/?twitch=app_not_configured", request.url),
     );
   }
 
   const state = crypto.randomUUID();
-  const redirectUri = new URL(
-    "/api/twitch/oauth/callback",
-    request.url,
-  ).toString();
+  const redirectUri =
+    TWITCH_OAUTH_REDIRECT_URI ??
+    new URL("/api/twitch/oauth/callback", request.url).toString();
 
   const authUrl = new URL("https://id.twitch.tv/oauth2/authorize");
   authUrl.searchParams.set("client_id", TWITCH_CLIENT_ID);

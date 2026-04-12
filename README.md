@@ -31,6 +31,7 @@ Required environment variables in Cloudflare Pages:
 
 - `TWITCH_CLIENT_ID`
 - `TWITCH_CLIENT_SECRET`
+- `TWITCH_OAUTH_REDIRECT_URI` (recommended, for example `https://your-domain.com/api/twitch/oauth/callback`)
 - Optional: `TWITCH_MAX_CHANNELS`, `NEXT_PUBLIC_TWITCH_REFRESH_SECONDS`, `NEXT_PUBLIC_TWITCH_MAX_CHANNELS`
 
 ## Twitch widget setup
@@ -39,6 +40,7 @@ To enable the Twitch widget with frontend login, add these environment variables
 
 - `TWITCH_CLIENT_ID` (required)
 - `TWITCH_CLIENT_SECRET` (required)
+- `TWITCH_OAUTH_REDIRECT_URI` (recommended in production)
 - `TWITCH_MAX_CHANNELS` (optional server default, defaults to `5`, capped at `10`)
 - `NEXT_PUBLIC_TWITCH_REFRESH_SECONDS` (optional client default, defaults to `90`)
 - `NEXT_PUBLIC_TWITCH_MAX_CHANNELS` (optional client default, defaults to `5`)
