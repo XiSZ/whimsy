@@ -8,6 +8,15 @@ A very stupid little startpage/newtab for your browser i made on a whim
 
 [Live Preview](https://whimsy.asteria.cat)
 
+## Build mode
+
+This project now uses API routes for Twitch OAuth, so server runtime is required.
+
+- Default build mode: server (works with Next.js API routes)
+- Optional static export mode: set `NEXT_STATIC_EXPORT=true` (Twitch OAuth routes will not work in static export)
+
+For Cloudflare Pages, use the Next.js framework runtime mode, not pure static export, if you want Twitch integration.
+
 ## Twitch widget setup
 
 To enable the Twitch widget with frontend login, add these environment variables:
