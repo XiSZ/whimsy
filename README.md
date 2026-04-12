@@ -17,6 +17,22 @@ This project now uses API routes for Twitch OAuth, so server runtime is required
 
 For Cloudflare Pages, use the Next.js framework runtime mode, not pure static export, if you want Twitch integration.
 
+### Cloudflare Pages settings
+
+If your deploy fails with `Output directory "out" not found`, your Pages project is still configured for legacy static export.
+
+Use these settings:
+
+- Build command: `npm run build:cf`
+- Build output directory: `.vercel/output/static`
+- Framework preset: `Next.js` (recommended)
+
+Required environment variables in Cloudflare Pages:
+
+- `TWITCH_CLIENT_ID`
+- `TWITCH_CLIENT_SECRET`
+- Optional: `TWITCH_MAX_CHANNELS`, `NEXT_PUBLIC_TWITCH_REFRESH_SECONDS`, `NEXT_PUBLIC_TWITCH_MAX_CHANNELS`
+
 ## Twitch widget setup
 
 To enable the Twitch widget with frontend login, add these environment variables:

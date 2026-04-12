@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:cf": "npx @cloudflare/next-on-pages@1",
     "start": "next start -p 3000",
     "icon:prepare": "python scripts/prepare_icon.py",
     "prefavicon:generate": "npm run icon:prepare",
