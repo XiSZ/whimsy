@@ -99,15 +99,22 @@ export async function GET(request: NextRequest) {
   const redirectBase = new URL("/", request.url);
 
   if (!code || !state || !savedState || state !== savedState) {
-    return NextResponse.redirect(new URL("/?twitch=oauth_failed", redirectBase));
+    return NextResponse.redirect(
+      new URL("/?twitch=oauth_failed", redirectBase),
+    );
   }
 
   try {
-    const redirectUri = new URL("/api/twitch/oauth/callback", request.url).toString();
+    const redirectUri = new URL(
+      "/api/twitch/oauth/callback",
+      request.url,
+    ).toString();
     const tokens = await exchangeCodeForTokens(code, redirectUri);
     const userId = await fetchUserId(tokens.accessToken);
 
-    const response = NextResponse.redirect(new URL("/?twitch=connected", redirectBase));
+    const response = NextResponse.redirect(
+      new URL("/?twitch=connected", redirectBase),
+    );
     const isProd = process.env.NODE_ENV === "production";
 
     response.cookies.set(COOKIE_ACCESS_TOKEN, tokens.accessToken, {
@@ -142,6 +149,8 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch {
-    return NextResponse.redirect(new URL("/?twitch=oauth_failed", redirectBase));
+    return NextResponse.redirect(
+      new URL("/?twitch=oauth_failed", redirectBase),
+    );
   }
 }

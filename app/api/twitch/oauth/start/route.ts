@@ -8,11 +8,16 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   if (!TWITCH_CLIENT_ID) {
-    return NextResponse.redirect(new URL("/?twitch=app_not_configured", request.url));
+    return NextResponse.redirect(
+      new URL("/?twitch=app_not_configured", request.url),
+    );
   }
 
   const state = randomUUID();
-  const redirectUri = new URL("/api/twitch/oauth/callback", request.url).toString();
+  const redirectUri = new URL(
+    "/api/twitch/oauth/callback",
+    request.url,
+  ).toString();
 
   const authUrl = new URL("https://id.twitch.tv/oauth2/authorize");
   authUrl.searchParams.set("client_id", TWITCH_CLIENT_ID);

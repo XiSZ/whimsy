@@ -54,7 +54,9 @@ function getRequestedMaxChannels(request: NextRequest): number {
   return normalizeMaxChannels(Number(raw));
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<TwitchTokenResponse> {
+async function refreshAccessToken(
+  refreshToken: string,
+): Promise<TwitchTokenResponse> {
   if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
     throw new Error("Missing Twitch refresh configuration");
   }
@@ -104,7 +106,10 @@ function getCookieAuth(request: NextRequest): Partial<AuthState> {
 
 async function resolveAuthState(request: NextRequest): Promise<{
   auth: AuthState | null;
-  updatedCookieAuth: Pick<AuthState, "accessToken" | "refreshToken" | "expiresAt"> | null;
+  updatedCookieAuth: Pick<
+    AuthState,
+    "accessToken" | "refreshToken" | "expiresAt"
+  > | null;
 }> {
   const cookieAuth = getCookieAuth(request);
   const cookieAccessToken = cookieAuth.accessToken;
@@ -112,7 +117,8 @@ async function resolveAuthState(request: NextRequest): Promise<{
 
   if (cookieAccessToken && cookieUserId) {
     const isExpired =
-      typeof cookieAuth.expiresAt === "number" && cookieAuth.expiresAt <= Date.now();
+      typeof cookieAuth.expiresAt === "number" &&
+      cookieAuth.expiresAt <= Date.now();
 
     if (!isExpired) {
       return {
@@ -129,7 +135,10 @@ async function resolveAuthState(request: NextRequest): Promise<{
 
     if (cookieAuth.refreshToken) {
       const refreshed = await refreshAccessToken(cookieAuth.refreshToken);
-      const expiresInSeconds = Math.max(60, Number(refreshed.expires_in ?? 3600));
+      const expiresInSeconds = Math.max(
+        60,
+        Number(refreshed.expires_in ?? 3600),
+      );
       const updated = {
         accessToken: refreshed.access_token as string,
         refreshToken: refreshed.refresh_token ?? cookieAuth.refreshToken,
@@ -190,7 +199,9 @@ async function fetchFollowedStreams(
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch Twitch followed streams (${response.status})`);
+    throw new Error(
+      `Failed to fetch Twitch followed streams (${response.status})`,
+    );
   }
 
   const payload = (await response.json()) as TwitchFollowedStreamsResponse;
@@ -208,14 +219,22 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   if (!isAppConfigured()) {
-    return NextResponse.json({ configured: false, connected: false, channels: [] });
+    return NextResponse.json({
+      configured: false,
+      connected: false,
+      channels: [],
+    });
   }
 
   try {
     const { auth, updatedCookieAuth } = await resolveAuthState(request);
 
     if (!auth) {
-      return NextResponse.json({ configured: true, connected: false, channels: [] });
+      return NextResponse.json({
+        configured: true,
+        connected: false,
+        channels: [],
+      });
     }
 
     const maxChannels = getRequestedMaxChannels(request);
@@ -234,7 +253,8 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          "Cache-Control": "private, max-age=0, s-maxage=120, stale-while-revalidate=180",
+          "Cache-Control":
+            "private, max-age=0, s-maxage=120, stale-while-revalidate=180",
         },
       },
     );
@@ -248,24 +268,36 @@ export async function GET(request: NextRequest) {
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       });
-      response.cookies.set(COOKIE_REFRESH_TOKEN, updatedCookieAuth.refreshToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isProd,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 120,
-      });
-      response.cookies.set(COOKIE_EXPIRES_AT, String(updatedCookieAuth.expiresAt), {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isProd,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 120,
-      });
+      response.cookies.set(
+        COOKIE_REFRESH_TOKEN,
+        updatedCookieAuth.refreshToken,
+        {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: isProd,
+          path: "/",
+          maxAge: 60 * 60 * 24 * 120,
+        },
+      );
+      response.cookies.set(
+        COOKIE_EXPIRES_AT,
+        String(updatedCookieAuth.expiresAt),
+        {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: isProd,
+          path: "/",
+          maxAge: 60 * 60 * 24 * 120,
+        },
+      );
     }
 
     return response;
   } catch {
-    return NextResponse.json({ configured: true, connected: false, channels: [] });
+    return NextResponse.json({
+      configured: true,
+      connected: false,
+      channels: [],
+    });
   }
 }

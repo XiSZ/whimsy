@@ -52,7 +52,9 @@ export default function TwitchWidget() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [refreshSeconds, setRefreshSeconds] = useState(getDefaultRefreshSeconds);
+  const [refreshSeconds, setRefreshSeconds] = useState(
+    getDefaultRefreshSeconds,
+  );
   const [maxChannels, setMaxChannels] = useState(getDefaultMaxChannels);
 
   const refreshMs = useMemo(() => {
@@ -62,7 +64,9 @@ export default function TwitchWidget() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const storedRefresh = Number(window.localStorage.getItem(TWITCH_REFRESH_KEY));
+    const storedRefresh = Number(
+      window.localStorage.getItem(TWITCH_REFRESH_KEY),
+    );
     const storedMaxChannels = Number(
       window.localStorage.getItem(TWITCH_MAX_CHANNELS_KEY),
     );
@@ -116,7 +120,9 @@ export default function TwitchWidget() {
     };
   }, [refreshMs, maxChannels]);
 
-  const handleRefreshSecondsChange = (event: ChangeEvent<HTMLSelectElement>) => {
+  const handleRefreshSecondsChange = (
+    event: ChangeEvent<HTMLSelectElement>,
+  ) => {
     const value = clamp(Number(event.target.value), 30, 600);
     setRefreshSeconds(value);
     if (typeof window !== "undefined") {
@@ -238,7 +244,9 @@ export default function TwitchWidget() {
           </button>
         </div>
       ) : !isLoaded ? (
-        <div className="mt-2 text-xs text-paradise-200/75">Checking channels...</div>
+        <div className="mt-2 text-xs text-paradise-200/75">
+          Checking channels...
+        </div>
       ) : channels.length === 0 ? (
         <div className="mt-2 grid gap-2">
           <div className="text-xs text-paradise-200/75">
