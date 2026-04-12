@@ -52,6 +52,7 @@ export default function TwitchWidget() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [oauthErrorReason, setOauthErrorReason] = useState<string | null>(null);
   const [refreshSeconds, setRefreshSeconds] = useState(
     getDefaultRefreshSeconds,
   );
@@ -78,6 +79,46 @@ export default function TwitchWidget() {
     if (Number.isFinite(storedMaxChannels)) {
       setMaxChannels(clamp(Math.round(storedMaxChannels), 1, 10));
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const twitchState = params.get("twitch");
+    const reason = params.get("twitch_reason");
+
+    if (twitchState !== "oauth_failed") return;
+    if (!reason) {
+      setOauthErrorReason("OAuth failed. Please reconnect.");
+      return;
+    }
+
+    if (reason === "state_mismatch") {
+      setOauthErrorReason("Session mismatch. Try reconnecting once.");
+      return;
+    }
+
+    if (reason === "token_exchange_failed") {
+      setOauthErrorReason(
+        "Token exchange failed. Check redirect URI and Twitch secret.",
+      );
+      return;
+    }
+
+    if (reason === "user_profile_failed") {
+      setOauthErrorReason("Connected, but profile lookup failed. Try again.");
+      return;
+    }
+
+    if (reason.startsWith("provider_")) {
+      setOauthErrorReason(
+        `Twitch denied auth (${reason.replace("provider_", "")}).`,
+      );
+      return;
+    }
+
+    setOauthErrorReason("OAuth failed. Please reconnect.");
   }, []);
 
   useEffect(() => {
@@ -224,6 +265,9 @@ export default function TwitchWidget() {
           <div className="text-xs text-paradise-200/75">
             Connect your account to load followed live channels.
           </div>
+          {oauthErrorReason ? (
+            <div className="text-[11px] text-[#ffb1b1]">{oauthErrorReason}</div>
+          ) : null}
           <button
             onClick={handleConnect}
             className="rounded-md border border-[#7d66d8]/70 bg-[#7d66d8]/20 px-2 py-1 text-xs font-medium text-[#d8cfff] transition-colors hover:bg-[#7d66d8]/30"

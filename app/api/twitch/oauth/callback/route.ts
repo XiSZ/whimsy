@@ -24,6 +24,13 @@ const COOKIE_EXPIRES_AT = "twitch_access_expires_at";
 
 export const runtime = "edge";
 
+function redirectWithReason(request: NextRequest, reason: string) {
+  const url = new URL("/", request.url);
+  url.searchParams.set("twitch", "oauth_failed");
+  url.searchParams.set("twitch_reason", reason);
+  return NextResponse.redirect(url);
+}
+
 async function exchangeCodeForTokens(code: string, redirectUri: string) {
   if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
     throw new Error("Missing Twitch app credentials");
@@ -98,29 +105,36 @@ export async function GET(request: NextRequest) {
   const oauthError = callbackUrl.searchParams.get("error");
   const savedState = request.cookies.get(OAUTH_STATE_COOKIE)?.value;
 
-  const redirectBase = new URL("/", request.url);
-
   if (oauthError) {
-    return NextResponse.redirect(
-      new URL("/?twitch=oauth_failed", redirectBase),
-    );
+    return redirectWithReason(request, `provider_${oauthError}`);
   }
 
   if (!code || !state || !savedState || state !== savedState) {
-    return NextResponse.redirect(
-      new URL("/?twitch=oauth_failed", redirectBase),
-    );
+    return redirectWithReason(request, "state_mismatch");
   }
 
   try {
     const redirectUri =
       TWITCH_OAUTH_REDIRECT_URI ??
       new URL("/api/twitch/oauth/callback", request.url).toString();
-    const tokens = await exchangeCodeForTokens(code, redirectUri);
-    const userId = await fetchUserId(tokens.accessToken);
+    let tokens: Awaited<ReturnType<typeof exchangeCodeForTokens>>;
+
+    try {
+      tokens = await exchangeCodeForTokens(code, redirectUri);
+    } catch {
+      return redirectWithReason(request, "token_exchange_failed");
+    }
+
+    let userId: string;
+
+    try {
+      userId = await fetchUserId(tokens.accessToken);
+    } catch {
+      return redirectWithReason(request, "user_profile_failed");
+    }
 
     const response = NextResponse.redirect(
-      new URL("/?twitch=connected", redirectBase),
+      new URL("/?twitch=connected", request.url),
     );
     const isProd = process.env.NODE_ENV === "production";
 
@@ -156,8 +170,6 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch {
-    return NextResponse.redirect(
-      new URL("/?twitch=oauth_failed", redirectBase),
-    );
+    return redirectWithReason(request, "unknown");
   }
 }
