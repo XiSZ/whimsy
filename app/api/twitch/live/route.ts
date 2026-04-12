@@ -37,7 +37,9 @@ interface AuthState {
 
 function isAppConfigured(): boolean {
   const hasOauthConfig = Boolean(TWITCH_CLIENT_ID && TWITCH_CLIENT_SECRET);
-  const hasLegacyConfig = Boolean(TWITCH_CLIENT_ID && TWITCH_ACCESS_TOKEN && TWITCH_USER_ID);
+  const hasLegacyConfig = Boolean(
+    TWITCH_CLIENT_ID && TWITCH_ACCESS_TOKEN && TWITCH_USER_ID,
+  );
   return hasOauthConfig || hasLegacyConfig;
 }
 
