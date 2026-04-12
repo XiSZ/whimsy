@@ -1,10 +1,9 @@
-import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const OAUTH_STATE_COOKIE = "twitch_oauth_state";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function GET(request: NextRequest) {
   if (!TWITCH_CLIENT_ID) {
@@ -13,7 +12,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const state = randomUUID();
+  const state = crypto.randomUUID();
   const redirectUri = new URL(
     "/api/twitch/oauth/callback",
     request.url,

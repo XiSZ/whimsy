@@ -21,7 +21,7 @@ const COOKIE_REFRESH_TOKEN = "twitch_refresh_token";
 const COOKIE_USER_ID = "twitch_user_id";
 const COOKIE_EXPIRES_AT = "twitch_access_expires_at";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 async function exchangeCodeForTokens(code: string, redirectUri: string) {
   if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {

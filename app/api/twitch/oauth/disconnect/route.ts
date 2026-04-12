@@ -6,7 +6,7 @@ const COOKIE_USER_ID = "twitch_user_id";
 const COOKIE_EXPIRES_AT = "twitch_access_expires_at";
 const OAUTH_STATE_COOKIE = "twitch_oauth_state";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function POST() {
   const response = NextResponse.json({ ok: true });
