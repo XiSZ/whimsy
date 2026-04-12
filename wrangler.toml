@@ -1,5 +1,4 @@
 name = "whimsy"
-account_id = "115fcc96a9083ed758e683ab88259d86"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
