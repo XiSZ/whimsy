@@ -3,11 +3,13 @@ import SearchBar from "@/components/startpage/SearchBar";
 import Bookmarks from "@/components/startpage/Bookmarks";
 import ProgressBars from "@/components/startpage/ProgressBars";
 import WeatherWidget from "@/components/startpage/WeatherWidget";
+import TwitchWidget from "@/components/startpage/TwitchWidget";
 import CurrentTime from "@/components/time/CurrentTime";
 
 export default function Page() {
   return (
     <>
+      <TwitchWidget />
       <WeatherWidget />
       <div className="flex flex-col items-center gap-8 animate-page-in">
         <div className="flex flex-col items-center gap-1 opacity-0 animate-[fadeIn_0.5s_ease-out_0.1s_forwards]">
