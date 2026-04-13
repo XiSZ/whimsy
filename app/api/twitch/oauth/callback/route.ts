@@ -56,10 +56,16 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body,
-      cache: "no-store",
     });
-  } catch {
-    throw new Error("token_exchange:network_error");
+  } catch (error) {
+    const rawMessage =
+      error instanceof Error ? error.message : "unknown_fetch_error";
+    const normalized = rawMessage
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 48);
+    throw new Error(`token_exchange:network_error_${normalized || "unknown"}`);
   }
 
   if (!response.ok) {
@@ -120,7 +126,6 @@ async function fetchUserId(accessToken: string) {
       Authorization: `Bearer ${accessToken}`,
       "Client-Id": TWITCH_CLIENT_ID,
     },
-    cache: "no-store",
   });
 
   if (!response.ok) {

@@ -128,6 +128,12 @@ export default function TwitchWidget() {
         setOauthErrorReason("Network error talking to Twitch token API.");
         return;
       }
+      if (detail.startsWith("network_error_")) {
+        setOauthErrorReason(
+          `Network error talking to Twitch token API (${detail.replace("network_error_", "")}).`,
+        );
+        return;
+      }
       if (detail === "missing_access_token") {
         setOauthErrorReason(
           "Twitch response was incomplete (no access token).",
