@@ -30,21 +30,12 @@ interface TwitchStreamsResponse {
   }>;
 }
 
-interface TwitchUsersLookupResponse {
-  data?: Array<{
-    id?: string;
-    login?: string;
-    display_name?: string;
-  }>;
-}
-
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 const TWITCH_REFRESH_TOKEN = process.env.TWITCH_REFRESH_TOKEN;
 const TWITCH_ACCESS_TOKEN = process.env.TWITCH_ACCESS_TOKEN;
 const TWITCH_USER_ID = process.env.TWITCH_USER_ID;
 const TWITCH_MAX_CHANNELS = Number(process.env.TWITCH_MAX_CHANNELS ?? "5");
-const TWITCH_FOLLOWED_LOGINS = process.env.TWITCH_FOLLOWED_LOGINS ?? "";
 
 const COOKIE_ACCESS_TOKEN = "twitch_access_token";
 const COOKIE_REFRESH_TOKEN = "twitch_refresh_token";
@@ -82,125 +73,33 @@ function getRequestedMaxChannels(request: NextRequest): number {
   return normalizeMaxChannels(Number(raw));
 }
 
-function getFallbackLogins(): string[] {
-  return Array.from(
-    new Set(
-      TWITCH_FOLLOWED_LOGINS.split(",")
-        .map((login) => login.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  ).slice(0, 100);
-}
-
-async function getAppAccessToken(): Promise<string> {
-  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
-    throw new Error("Missing Twitch client credentials");
-  }
-
-  const body = new URLSearchParams({
-    client_id: TWITCH_CLIENT_ID,
-    client_secret: TWITCH_CLIENT_SECRET,
-    grant_type: "client_credentials",
-  });
-
-  const response = await fetch("https://id.twitch.tv/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to get app access token (${response.status})`);
-  }
-
-  const payload = (await response.json()) as TwitchTokenResponse;
-
-  if (!payload.access_token) {
-    throw new Error("Missing app access token");
-  }
-
-  return payload.access_token;
-}
-
-async function fetchStreamsFromLoginList(
-  logins: string[],
-  maxChannels: number,
-): Promise<
-  Array<{
-    login: string;
-    name: string;
-    viewerCount: number;
-    category: string;
-  }>
-> {
+async function fetchCurrentUserIdFromToken(accessToken: string): Promise<string> {
   if (!TWITCH_CLIENT_ID) {
     throw new Error("Missing Twitch client id");
   }
 
-  if (logins.length === 0) {
-    return [];
+  const response = await fetch("https://api.twitch.tv/helix/users", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Client-Id": TWITCH_CLIENT_ID,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to resolve current user (${response.status})`);
   }
 
-  const accessToken = await getAppAccessToken();
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    "Client-Id": TWITCH_CLIENT_ID,
+  const payload = (await response.json()) as {
+    data?: Array<{ id?: string }>;
   };
+  const userId = payload.data?.[0]?.id;
 
-  const usersQuery = new URLSearchParams();
-  logins.forEach((login) => usersQuery.append("login", login));
-
-  const usersResponse = await fetch(
-    `https://api.twitch.tv/helix/users?${usersQuery.toString()}`,
-    {
-      headers,
-      cache: "no-store",
-    },
-  );
-
-  if (!usersResponse.ok) {
-    throw new Error(`Failed to resolve user IDs (${usersResponse.status})`);
+  if (!userId) {
+    throw new Error("Current user id missing in Twitch profile response");
   }
 
-  const usersPayload = (await usersResponse.json()) as TwitchUsersLookupResponse;
-  const userIds = (Array.isArray(usersPayload.data) ? usersPayload.data : [])
-    .map((user) => user.id)
-    .filter((id): id is string => Boolean(id));
-
-  if (userIds.length === 0) {
-    return [];
-  }
-
-  const streamsQuery = new URLSearchParams({ first: "100" });
-  userIds.forEach((id) => streamsQuery.append("user_id", id));
-
-  const streamsResponse = await fetch(
-    `https://api.twitch.tv/helix/streams?${streamsQuery.toString()}`,
-    {
-      headers,
-      cache: "no-store",
-    },
-  );
-
-  if (!streamsResponse.ok) {
-    throw new Error(`Failed to fetch streams list (${streamsResponse.status})`);
-  }
-
-  const streamsPayload = (await streamsResponse.json()) as TwitchStreamsResponse;
-  const streams = Array.isArray(streamsPayload.data) ? streamsPayload.data : [];
-
-  return streams
-    .map((stream) => ({
-      login: stream.user_login ?? "",
-      name: stream.user_name ?? stream.user_login ?? "Unknown",
-      viewerCount: Number(stream.viewer_count ?? 0),
-      category: stream.game_name ?? "Uncategorized",
-    }))
-    .sort((a, b) => b.viewerCount - a.viewerCount)
-    .slice(0, maxChannels);
+  return userId;
 }
 
 async function refreshAccessToken(
@@ -264,7 +163,21 @@ async function resolveAuthState(request: NextRequest): Promise<{
   const cookieAccessToken = cookieAuth.accessToken;
   const cookieUserId = cookieAuth.userId;
 
-  if (cookieAccessToken && cookieUserId) {
+  if (cookieAccessToken) {
+    let resolvedUserId = cookieUserId;
+
+    if (!resolvedUserId) {
+      try {
+        resolvedUserId = await fetchCurrentUserIdFromToken(cookieAccessToken);
+      } catch {
+        resolvedUserId = undefined;
+      }
+    }
+
+    if (!resolvedUserId) {
+      return { auth: null, updatedCookieAuth: null };
+    }
+
     const isExpired =
       typeof cookieAuth.expiresAt === "number" &&
       cookieAuth.expiresAt <= Date.now();
@@ -274,7 +187,7 @@ async function resolveAuthState(request: NextRequest): Promise<{
         auth: {
           accessToken: cookieAccessToken,
           refreshToken: cookieAuth.refreshToken,
-          userId: cookieUserId,
+          userId: resolvedUserId,
           expiresAt: cookieAuth.expiresAt,
           source: "cookie",
         },
@@ -298,7 +211,7 @@ async function resolveAuthState(request: NextRequest): Promise<{
         auth: {
           accessToken: updated.accessToken,
           refreshToken: updated.refreshToken,
-          userId: cookieUserId,
+            userId: resolvedUserId,
           expiresAt: updated.expiresAt,
           source: "cookie",
         },
@@ -462,31 +375,6 @@ export async function GET(request: NextRequest) {
     const maxChannels = getRequestedMaxChannels(request);
 
     if (!auth) {
-      const fallbackLogins = getFallbackLogins();
-
-      if (fallbackLogins.length > 0) {
-        const channels = await fetchStreamsFromLoginList(
-          fallbackLogins,
-          maxChannels,
-        );
-
-        return NextResponse.json(
-          {
-            configured: true,
-            connected: true,
-            channels,
-            mode: "login-list",
-            fetchedAt: new Date().toISOString(),
-          },
-          {
-            headers: {
-              "Cache-Control":
-                "private, max-age=0, s-maxage=120, stale-while-revalidate=180",
-            },
-          },
-        );
-      }
-
       return NextResponse.json({
         configured: true,
         connected: false,
@@ -573,6 +461,13 @@ export async function GET(request: NextRequest) {
           maxAge: 60 * 60 * 24 * 120,
         },
       );
+      response.cookies.set(COOKIE_USER_ID, auth.userId, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: isProd,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 120,
+      });
     }
 
     return response;

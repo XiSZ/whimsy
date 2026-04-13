@@ -61,13 +61,6 @@ Optional fallback mode (legacy, no UI login):
 - `TWITCH_ACCESS_TOKEN`
 - `TWITCH_REFRESH_TOKEN`
 
-Alternative fallback mode (recommended if OAuth session is unreliable in your browser/runtime):
-
-- `TWITCH_FOLLOWED_LOGINS` as a comma-separated list, for example:
-   - `TWITCH_FOLLOWED_LOGINS=streamer1,streamer2,streamer3`
-
-In this mode, the app uses your Twitch client credentials server-side to resolve that list and show currently live channels without requiring persistent OAuth cookies.
-
 ## Get Twitch client id and client secret
 
 1. Open the Twitch Developer Console: [https://dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)
