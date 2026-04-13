@@ -4,6 +4,9 @@ interface TwitchTokenResponse {
   access_token?: string;
   refresh_token?: string;
   expires_in?: number;
+  error?: string;
+  message?: string;
+  status?: number;
 }
 
 interface TwitchUsersResponse {
@@ -54,7 +57,37 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to exchange Twitch authorization code");
+    let reason = `status_${response.status}`;
+
+    try {
+      const errorPayload = (await response.json()) as TwitchTokenResponse;
+      const providerError = errorPayload.error
+        ?.toLowerCase()
+        .replace(/\s+/g, "_");
+      const message = errorPayload.message?.toLowerCase() ?? "";
+
+      if (providerError) {
+        reason = providerError;
+      }
+
+      if (message.includes("redirect_uri")) {
+        reason = "redirect_uri_mismatch";
+      } else if (
+        message.includes("client secret") ||
+        message.includes("invalid client")
+      ) {
+        reason = "invalid_client_secret";
+      } else if (
+        message.includes("invalid oauth token") ||
+        message.includes("invalid code")
+      ) {
+        reason = "invalid_code";
+      }
+    } catch {
+      // keep fallback status-based reason
+    }
+
+    throw new Error(`token_exchange:${reason}`);
   }
 
   const payload = (await response.json()) as TwitchTokenResponse;
@@ -121,8 +154,12 @@ export async function GET(request: NextRequest) {
 
     try {
       tokens = await exchangeCodeForTokens(code, redirectUri);
-    } catch {
-      return redirectWithReason(request, "token_exchange_failed");
+    } catch (error) {
+      const reason =
+        error instanceof Error && error.message.startsWith("token_exchange:")
+          ? `token_exchange_${error.message.slice("token_exchange:".length)}`
+          : "token_exchange_failed";
+      return redirectWithReason(request, reason);
     }
 
     let userId: string;

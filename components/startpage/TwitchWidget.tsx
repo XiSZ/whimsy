@@ -106,6 +106,29 @@ export default function TwitchWidget() {
       return;
     }
 
+    if (reason.startsWith("token_exchange_")) {
+      const detail = reason.replace("token_exchange_", "");
+      if (detail === "redirect_uri_mismatch") {
+        setOauthErrorReason(
+          "Redirect URI mismatch. Check Twitch app + env URI.",
+        );
+        return;
+      }
+      if (detail === "invalid_client_secret") {
+        setOauthErrorReason("Invalid Twitch client secret in Cloudflare env.");
+        return;
+      }
+      if (detail === "invalid_code") {
+        setOauthErrorReason(
+          "Authorization code expired/invalid. Try reconnecting.",
+        );
+        return;
+      }
+
+      setOauthErrorReason(`Token exchange failed (${detail}).`);
+      return;
+    }
+
     if (reason === "user_profile_failed") {
       setOauthErrorReason("Connected, but profile lookup failed. Try again.");
       return;
