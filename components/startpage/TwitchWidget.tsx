@@ -124,6 +124,14 @@ export default function TwitchWidget() {
         );
         return;
       }
+      if (detail === "network_error") {
+        setOauthErrorReason("Network error talking to Twitch token API.");
+        return;
+      }
+      if (detail === "missing_access_token") {
+        setOauthErrorReason("Twitch response was incomplete (no access token).");
+        return;
+      }
 
       setOauthErrorReason(`Token exchange failed (${detail}).`);
       return;

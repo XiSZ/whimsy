@@ -47,14 +47,20 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
     redirect_uri: redirectUri,
   });
 
-  const response = await fetch("https://id.twitch.tv/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-    cache: "no-store",
-  });
+  let response: Response;
+
+  try {
+    response = await fetch("https://id.twitch.tv/oauth2/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("token_exchange:network_error");
+  }
 
   if (!response.ok) {
     let reason = `status_${response.status}`;
@@ -91,8 +97,8 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
   }
 
   const payload = (await response.json()) as TwitchTokenResponse;
-  if (!payload.access_token || !payload.refresh_token) {
-    throw new Error("Twitch token exchange returned incomplete tokens");
+  if (!payload.access_token) {
+    throw new Error("token_exchange:missing_access_token");
   }
 
   const expiresInSeconds = Math.max(60, Number(payload.expires_in ?? 3600));
@@ -182,13 +188,17 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
-    response.cookies.set(COOKIE_REFRESH_TOKEN, tokens.refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProd,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 120,
-    });
+    if (tokens.refreshToken) {
+      response.cookies.set(COOKIE_REFRESH_TOKEN, tokens.refreshToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: isProd,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 120,
+      });
+    } else {
+      response.cookies.delete(COOKIE_REFRESH_TOKEN);
+    }
     response.cookies.set(COOKIE_USER_ID, userId, {
       httpOnly: true,
       sameSite: "lax",
