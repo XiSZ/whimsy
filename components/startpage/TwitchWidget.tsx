@@ -321,6 +321,13 @@ export default function TwitchWidget() {
           >
             Connect Twitch
           </button>
+          <button
+            onClick={handleDisconnect}
+            disabled={isDisconnecting}
+            className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/80 transition-colors hover:bg-black/30 disabled:opacity-60"
+          >
+            {isDisconnecting ? "Resetting..." : "Reset Twitch session"}
+          </button>
         </div>
       ) : hasError ? (
         <div className="mt-2 grid gap-2">
@@ -332,6 +339,13 @@ export default function TwitchWidget() {
             className="rounded-md border border-[#7d66d8]/70 bg-[#7d66d8]/20 px-2 py-1 text-xs font-medium text-[#d8cfff] transition-colors hover:bg-[#7d66d8]/30"
           >
             Reconnect
+          </button>
+          <button
+            onClick={handleDisconnect}
+            disabled={isDisconnecting}
+            className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/80 transition-colors hover:bg-black/30 disabled:opacity-60"
+          >
+            {isDisconnecting ? "Resetting..." : "Reset Twitch session"}
           </button>
         </div>
       ) : !isLoaded ? (
