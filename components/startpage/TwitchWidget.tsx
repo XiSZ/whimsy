@@ -129,7 +129,9 @@ export default function TwitchWidget() {
         return;
       }
       if (detail === "missing_access_token") {
-        setOauthErrorReason("Twitch response was incomplete (no access token).");
+        setOauthErrorReason(
+          "Twitch response was incomplete (no access token).",
+        );
         return;
       }
 
