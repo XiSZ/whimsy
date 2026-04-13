@@ -192,6 +192,10 @@ async function resolveAuthState(request: NextRequest): Promise<{
   return { auth: null, updatedCookieAuth: null };
 }
 
+function isUnauthorizedTwitchError(error: unknown): boolean {
+  return error instanceof Error && error.message === "twitch_unauthorized";
+}
+
 async function fetchFollowedStreams(
   accessToken: string,
   userId: string,
@@ -234,6 +238,10 @@ async function fetchFollowedStreams(
     },
   );
 
+  if (response.status === 401) {
+    throw new Error("twitch_unauthorized");
+  }
+
   if (response.ok) {
     const payload = (await response.json()) as TwitchFollowedStreamsResponse;
     const streams = Array.isArray(payload.data) ? payload.data : [];
@@ -254,6 +262,10 @@ async function fetchFollowedStreams(
       cache: "no-store",
     },
   );
+
+  if (followsResponse.status === 401) {
+    throw new Error("twitch_unauthorized");
+  }
 
   if (!followsResponse.ok) {
     throw new Error(
@@ -285,6 +297,10 @@ async function fetchFollowedStreams(
       cache: "no-store",
     },
   );
+
+  if (streamsResponse.status === 401) {
+    throw new Error("twitch_unauthorized");
+  }
 
   if (!streamsResponse.ok) {
     throw new Error(`Failed to fetch streams list (${streamsResponse.status})`);
@@ -322,11 +338,38 @@ export async function GET(request: NextRequest) {
     }
 
     const maxChannels = getRequestedMaxChannels(request);
-    const channels = await fetchFollowedStreams(
-      auth.accessToken,
-      auth.userId,
-      maxChannels,
-    );
+    let channels;
+    let refreshedCookieAuth = updatedCookieAuth;
+
+    try {
+      channels = await fetchFollowedStreams(auth.accessToken, auth.userId, maxChannels);
+    } catch (error) {
+      if (
+        isUnauthorizedTwitchError(error) &&
+        auth.source === "cookie" &&
+        auth.refreshToken
+      ) {
+        const refreshed = await refreshAccessToken(auth.refreshToken);
+        const expiresInSeconds = Math.max(60, Number(refreshed.expires_in ?? 3600));
+
+        const retriedAccessToken = refreshed.access_token as string;
+        const retriedRefreshToken = refreshed.refresh_token ?? auth.refreshToken;
+
+        channels = await fetchFollowedStreams(
+          retriedAccessToken,
+          auth.userId,
+          maxChannels,
+        );
+
+        refreshedCookieAuth = {
+          accessToken: retriedAccessToken,
+          refreshToken: retriedRefreshToken,
+          expiresAt: Date.now() + (expiresInSeconds - 60) * 1000,
+        };
+      } else {
+        throw error;
+      }
+    }
 
     const response = NextResponse.json(
       {
@@ -343,9 +386,9 @@ export async function GET(request: NextRequest) {
       },
     );
 
-    if (auth.source === "cookie" && updatedCookieAuth) {
+    if (auth.source === "cookie" && refreshedCookieAuth) {
       const isProd = process.env.NODE_ENV === "production";
-      response.cookies.set(COOKIE_ACCESS_TOKEN, updatedCookieAuth.accessToken, {
+      response.cookies.set(COOKIE_ACCESS_TOKEN, refreshedCookieAuth.accessToken, {
         httpOnly: true,
         sameSite: "lax",
         secure: isProd,
@@ -354,7 +397,7 @@ export async function GET(request: NextRequest) {
       });
       response.cookies.set(
         COOKIE_REFRESH_TOKEN,
-        updatedCookieAuth.refreshToken,
+        refreshedCookieAuth.refreshToken,
         {
           httpOnly: true,
           sameSite: "lax",
@@ -365,7 +408,7 @@ export async function GET(request: NextRequest) {
       );
       response.cookies.set(
         COOKIE_EXPIRES_AT,
-        String(updatedCookieAuth.expiresAt),
+        String(refreshedCookieAuth.expiresAt),
         {
           httpOnly: true,
           sameSite: "lax",
