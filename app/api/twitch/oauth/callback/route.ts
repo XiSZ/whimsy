@@ -19,13 +19,60 @@ const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 const TWITCH_OAUTH_REDIRECT_URI = process.env.TWITCH_OAUTH_REDIRECT_URI;
 
-const OAUTH_STATE_COOKIE = "twitch_oauth_state";
 const COOKIE_ACCESS_TOKEN = "twitch_access_token";
 const COOKIE_REFRESH_TOKEN = "twitch_refresh_token";
 const COOKIE_USER_ID = "twitch_user_id";
 const COOKIE_EXPIRES_AT = "twitch_access_expires_at";
 
 export const runtime = "edge";
+
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
+function fromBase64Url(value: string): Uint8Array {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function verifyStateSignature(
+  payload: string,
+  signature: string,
+  secret: string,
+): Promise<boolean> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    fromBase64Url(signature),
+    new TextEncoder().encode(payload),
+  );
+}
+
+async function isValidState(state: string): Promise<boolean> {
+  if (!TWITCH_CLIENT_SECRET) return false;
+
+  const parts = state.split(".");
+  if (parts.length < 3) return false;
+
+  const signature = parts.pop() as string;
+  const payload = parts.join(".");
+  const issuedAtRaw = parts[parts.length - 1];
+  const issuedAt = Number(issuedAtRaw);
+
+  if (!Number.isFinite(issuedAt)) return false;
+  if (Date.now() - issuedAt > OAUTH_STATE_TTL_MS) return false;
+
+  return verifyStateSignature(payload, signature, TWITCH_CLIENT_SECRET);
+}
 
 function redirectWithReason(request: NextRequest, reason: string) {
   const url = new URL("/", request.url);
@@ -147,13 +194,12 @@ export async function GET(request: NextRequest) {
   const code = callbackUrl.searchParams.get("code");
   const state = callbackUrl.searchParams.get("state");
   const oauthError = callbackUrl.searchParams.get("error");
-  const savedState = request.cookies.get(OAUTH_STATE_COOKIE)?.value;
 
   if (oauthError) {
     return redirectWithReason(request, `provider_${oauthError}`);
   }
 
-  if (!code || !state || !savedState || state !== savedState) {
+  if (!code || !state || !(await isValidState(state))) {
     return redirectWithReason(request, "state_mismatch");
   }
 
@@ -218,7 +264,6 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 120,
     });
-    response.cookies.delete(OAUTH_STATE_COOKIE);
 
     return response;
   } catch {
