@@ -23,6 +23,7 @@ const TWITCH_MAX_CHANNELS = Number(process.env.NEXT_PUBLIC_TWITCH_MAX_CHANNELS);
 
 const TWITCH_REFRESH_KEY = "whimsy.twitch.refreshSeconds";
 const TWITCH_MAX_CHANNELS_KEY = "whimsy.twitch.maxChannels";
+const TWITCH_FETCH_LIMIT = 100;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -53,6 +54,7 @@ export default function TwitchWidget() {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [oauthErrorReason, setOauthErrorReason] = useState<string | null>(null);
+  const [showAllChannels, setShowAllChannels] = useState(false);
   const [refreshSeconds, setRefreshSeconds] = useState(
     getDefaultRefreshSeconds,
   );
@@ -166,7 +168,7 @@ export default function TwitchWidget() {
     const update = async () => {
       try {
         const query = new URLSearchParams({
-          maxChannels: String(clamp(maxChannels, 1, 10)),
+          maxChannels: String(TWITCH_FETCH_LIMIT),
         });
         const response = await fetch(`/api/twitch/live?${query.toString()}`, {
           cache: "no-store",
@@ -199,6 +201,12 @@ export default function TwitchWidget() {
       clearInterval(interval);
     };
   }, [refreshMs, maxChannels]);
+
+  const visibleChannels = showAllChannels
+    ? channels
+    : channels.slice(0, clamp(maxChannels, 1, 10));
+
+  const canExpand = channels.length > clamp(maxChannels, 1, 10);
 
   const handleRefreshSecondsChange = (
     event: ChangeEvent<HTMLSelectElement>,
@@ -346,7 +354,7 @@ export default function TwitchWidget() {
       ) : (
         <div className="mt-2 grid gap-2">
           <div className="grid gap-1.5">
-            {channels.map((channel) => (
+            {visibleChannels.map((channel) => (
               <a
                 key={channel.login}
                 href={`https://twitch.tv/${channel.login}`}
@@ -368,6 +376,16 @@ export default function TwitchWidget() {
               </a>
             ))}
           </div>
+          {canExpand ? (
+            <button
+              onClick={() => setShowAllChannels((open) => !open)}
+              className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/80 transition-colors hover:bg-black/30"
+            >
+              {showAllChannels
+                ? `Show less (${clamp(maxChannels, 1, 10)})`
+                : `Show all (${channels.length})`}
+            </button>
+          ) : null}
           <button
             onClick={handleDisconnect}
             disabled={isDisconnecting}

@@ -41,7 +41,7 @@ To enable the Twitch widget with frontend login, add these environment variables
 - `TWITCH_CLIENT_ID` (required)
 - `TWITCH_CLIENT_SECRET` (required)
 - `TWITCH_OAUTH_REDIRECT_URI` (recommended in production)
-- `TWITCH_MAX_CHANNELS` (optional server default, defaults to `5`, capped at `10`)
+- `TWITCH_MAX_CHANNELS` (optional server default, defaults to `5`, capped at `100`)
 - `NEXT_PUBLIC_TWITCH_REFRESH_SECONDS` (optional client default, defaults to `90`)
 - `NEXT_PUBLIC_TWITCH_MAX_CHANNELS` (optional client default, defaults to `5`)
 
@@ -51,6 +51,7 @@ The widget now has a **Settings** toggle where you can configure:
 
 - Refresh interval (`30s` to `600s`)
 - Number of channels shown (`1` to `10`)
+- Expand/collapse to show all currently live followed channels
 
 These settings are saved in your browser (localStorage), so they are configurable without changing env variables.
 

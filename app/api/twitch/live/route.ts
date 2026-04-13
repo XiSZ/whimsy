@@ -15,6 +15,21 @@ interface TwitchFollowedStreamsResponse {
   }>;
 }
 
+interface TwitchFollowedChannelsResponse {
+  data?: Array<{
+    broadcaster_id?: string;
+  }>;
+}
+
+interface TwitchStreamsResponse {
+  data?: Array<{
+    user_login?: string;
+    user_name?: string;
+    viewer_count?: number;
+    game_name?: string;
+  }>;
+}
+
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 const TWITCH_REFRESH_TOKEN = process.env.TWITCH_REFRESH_TOKEN;
@@ -45,7 +60,7 @@ function isAppConfigured(): boolean {
 
 function normalizeMaxChannels(value: number): number {
   if (!Number.isFinite(value)) return 5;
-  return Math.max(1, Math.min(10, Math.round(value)));
+  return Math.max(1, Math.min(100, Math.round(value)));
 }
 
 function getMaxChannelsFromEnv(): number {
@@ -186,6 +201,26 @@ async function fetchFollowedStreams(
     throw new Error("Missing Twitch client configuration");
   }
 
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    "Client-Id": TWITCH_CLIENT_ID,
+  };
+
+  const mapStreams = (
+    streams: Array<{
+      user_login?: string;
+      user_name?: string;
+      viewer_count?: number;
+      game_name?: string;
+    }>,
+  ) =>
+    streams.map((stream) => ({
+      login: stream.user_login ?? "",
+      name: stream.user_name ?? stream.user_login ?? "Unknown",
+      viewerCount: Number(stream.viewer_count ?? 0),
+      category: stream.game_name ?? "Uncategorized",
+    }));
+
   const query = new URLSearchParams({
     user_id: userId,
     first: String(maxChannels),
@@ -194,29 +229,74 @@ async function fetchFollowedStreams(
   const response = await fetch(
     `https://api.twitch.tv/helix/streams/followed?${query.toString()}`,
     {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Client-Id": TWITCH_CLIENT_ID,
-      },
+      headers,
       cache: "no-store",
     },
   );
 
-  if (!response.ok) {
+  if (response.ok) {
+    const payload = (await response.json()) as TwitchFollowedStreamsResponse;
+    const streams = Array.isArray(payload.data) ? payload.data : [];
+    return mapStreams(streams);
+  }
+
+  if (![400, 401, 403, 404].includes(response.status)) {
     throw new Error(
       `Failed to fetch Twitch followed streams (${response.status})`,
     );
   }
 
-  const payload = (await response.json()) as TwitchFollowedStreamsResponse;
-  const streams = Array.isArray(payload.data) ? payload.data : [];
+  // Fallback for environments/accounts where streams/followed is restricted.
+  const followsResponse = await fetch(
+    `https://api.twitch.tv/helix/channels/followed?user_id=${encodeURIComponent(userId)}&first=100`,
+    {
+      headers,
+      cache: "no-store",
+    },
+  );
 
-  return streams.map((stream) => ({
-    login: stream.user_login ?? "",
-    name: stream.user_name ?? stream.user_login ?? "Unknown",
-    viewerCount: Number(stream.viewer_count ?? 0),
-    category: stream.game_name ?? "Uncategorized",
-  }));
+  if (!followsResponse.ok) {
+    throw new Error(
+      `Failed to fetch followed channels (${followsResponse.status})`,
+    );
+  }
+
+  const followsPayload =
+    (await followsResponse.json()) as TwitchFollowedChannelsResponse;
+  const followedIds = Array.from(
+    new Set(
+      (Array.isArray(followsPayload.data) ? followsPayload.data : [])
+        .map((item) => item.broadcaster_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  if (followedIds.length === 0) {
+    return [];
+  }
+
+  const streamQuery = new URLSearchParams({ first: "100" });
+  followedIds.forEach((id) => streamQuery.append("user_id", id));
+
+  const streamsResponse = await fetch(
+    `https://api.twitch.tv/helix/streams?${streamQuery.toString()}`,
+    {
+      headers,
+      cache: "no-store",
+    },
+  );
+
+  if (!streamsResponse.ok) {
+    throw new Error(`Failed to fetch streams list (${streamsResponse.status})`);
+  }
+
+  const streamsPayload =
+    (await streamsResponse.json()) as TwitchStreamsResponse;
+  const streams = Array.isArray(streamsPayload.data) ? streamsPayload.data : [];
+
+  return mapStreams(streams)
+    .sort((a, b) => b.viewerCount - a.viewerCount)
+    .slice(0, maxChannels);
 }
 
 export const runtime = "edge";
