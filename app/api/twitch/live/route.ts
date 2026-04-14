@@ -492,8 +492,13 @@ export async function GET(request: NextRequest) {
             : err instanceof Error && err.message.toLowerCase().includes("api")
               ? "api_error"
               : "unknown";
+    // Temporary: expose a sanitized error detail to aid production debugging.
+    // Remove once root cause is confirmed.
+    const detail = err instanceof Error
+      ? err.message.replace(/Bearer\s+\S+/gi, "Bearer [redacted]").slice(0, 120)
+      : "non_error_throw";
     return NextResponse.json(
-      { configured: true, connected: false, channels: [], error_code: code },
+      { configured: true, connected: false, channels: [], error_code: code, error_detail: detail },
       { headers: noStoreHeaders() },
     );
   }
