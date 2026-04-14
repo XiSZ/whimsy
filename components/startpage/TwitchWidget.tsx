@@ -203,7 +203,10 @@ export default function TwitchWidget() {
   }, [refreshMs, maxChannels]);
 
   const visibleChannels = showAllChannels
-    ? channels
+    ? [...channels].sort((a, b) =>
+        a.category.localeCompare(b.category) ||
+        a.name.localeCompare(b.name),
+      )
     : channels.slice(0, clamp(maxChannels, 1, 10));
 
   const canExpand = channels.length > clamp(maxChannels, 1, 10);
@@ -367,7 +370,7 @@ export default function TwitchWidget() {
         </div>
       ) : (
         <div className="mt-2 grid gap-2">
-          <div className="grid gap-1.5">
+          <div className={`grid gap-1.5 ${showAllChannels ? "max-h-[260px] overflow-y-auto pr-0.5" : ""}`}>
             {visibleChannels.map((channel) => (
               <a
                 key={channel.login}
