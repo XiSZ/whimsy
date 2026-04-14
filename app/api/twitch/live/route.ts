@@ -96,7 +96,6 @@ async function fetchCurrentUserIdFromToken(accessToken: string): Promise<string>
       Authorization: `Bearer ${accessToken}`,
       "Client-Id": TWITCH_CLIENT_ID,
     },
-    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -135,7 +134,6 @@ async function refreshAccessToken(
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body,
-    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -292,10 +290,7 @@ async function fetchFollowedStreams(
 
   const response = await fetch(
     `https://api.twitch.tv/helix/streams/followed?${query.toString()}`,
-    {
-      headers,
-      cache: "no-store",
-    },
+    { headers },
   );
 
   if (response.status === 401) {
@@ -317,10 +312,7 @@ async function fetchFollowedStreams(
   // Fallback for environments/accounts where streams/followed is restricted.
   const followsResponse = await fetch(
     `https://api.twitch.tv/helix/channels/followed?user_id=${encodeURIComponent(userId)}&first=100`,
-    {
-      headers,
-      cache: "no-store",
-    },
+    { headers },
   );
 
   if (followsResponse.status === 401) {
@@ -352,10 +344,7 @@ async function fetchFollowedStreams(
 
   const streamsResponse = await fetch(
     `https://api.twitch.tv/helix/streams?${streamQuery.toString()}`,
-    {
-      headers,
-      cache: "no-store",
-    },
+    { headers },
   );
 
   if (streamsResponse.status === 401) {
