@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
+type ErrorCode =
+  | "no_auth"
+  | "token_expired_no_refresh"
+  | "refresh_failed"
+  | "unauthorized"
+  | "scope_missing"
+  | "api_error"
+  | "unknown";
+
+function noStoreHeaders() {
+  return { "Cache-Control": "private, no-store" };
+}
+
 interface TwitchTokenResponse {
   access_token?: string;
   refresh_token?: string;
@@ -211,13 +224,17 @@ async function resolveAuthState(request: NextRequest): Promise<{
         auth: {
           accessToken: updated.accessToken,
           refreshToken: updated.refreshToken,
-            userId: resolvedUserId,
+          userId: resolvedUserId,
           expiresAt: updated.expiresAt,
           source: "cookie",
         },
         updatedCookieAuth: updated,
       };
     }
+
+    // Access token cookie exists but is expired with no refresh token.
+    // Do not silently fall through to env auth — signal re-authentication needed.
+    return { auth: null, updatedCookieAuth: null };
   }
 
   if (TWITCH_ACCESS_TOKEN && TWITCH_USER_ID) {
@@ -362,11 +379,10 @@ export const runtime = "edge";
 
 export async function GET(request: NextRequest) {
   if (!isAppConfigured()) {
-    return NextResponse.json({
-      configured: false,
-      connected: false,
-      channels: [],
-    });
+    return NextResponse.json(
+      { configured: false, connected: false, channels: [] },
+      { headers: noStoreHeaders() },
+    );
   }
 
   try {
@@ -375,11 +391,10 @@ export async function GET(request: NextRequest) {
     const maxChannels = getRequestedMaxChannels(request);
 
     if (!auth) {
-      return NextResponse.json({
-        configured: true,
-        connected: false,
-        channels: [],
-      });
+      return NextResponse.json(
+        { configured: true, connected: false, channels: [], error_code: "no_auth" as ErrorCode },
+        { headers: noStoreHeaders() },
+      );
     }
 
     let channels;
@@ -422,20 +437,15 @@ export async function GET(request: NextRequest) {
         channels,
         fetchedAt: new Date().toISOString(),
       },
-      {
-        headers: {
-          "Cache-Control":
-            "private, max-age=0, s-maxage=120, stale-while-revalidate=180",
-        },
-      },
+      { headers: noStoreHeaders() },
     );
 
     if (auth.source === "cookie" && refreshedCookieAuth) {
-      const isProd = process.env.NODE_ENV === "production";
+      const isSecure = request.url.startsWith("https://");
       response.cookies.set(COOKIE_ACCESS_TOKEN, refreshedCookieAuth.accessToken, {
         httpOnly: true,
         sameSite: "lax",
-        secure: isProd,
+        secure: isSecure,
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       });
@@ -445,7 +455,7 @@ export async function GET(request: NextRequest) {
         {
           httpOnly: true,
           sameSite: "lax",
-          secure: isProd,
+          secure: isSecure,
           path: "/",
           maxAge: 60 * 60 * 24 * 120,
         },
@@ -456,7 +466,7 @@ export async function GET(request: NextRequest) {
         {
           httpOnly: true,
           sameSite: "lax",
-          secure: isProd,
+          secure: isSecure,
           path: "/",
           maxAge: 60 * 60 * 24 * 120,
         },
@@ -464,18 +474,27 @@ export async function GET(request: NextRequest) {
       response.cookies.set(COOKIE_USER_ID, auth.userId, {
         httpOnly: true,
         sameSite: "lax",
-        secure: isProd,
+        secure: isSecure,
         path: "/",
         maxAge: 60 * 60 * 24 * 120,
       });
     }
 
     return response;
-  } catch {
-    return NextResponse.json({
-      configured: true,
-      connected: false,
-      channels: [],
-    });
+  } catch (err) {
+    const code: ErrorCode =
+      err instanceof Error && err.message === "twitch_unauthorized"
+        ? "unauthorized"
+        : err instanceof Error && err.message.toLowerCase().includes("scope")
+          ? "scope_missing"
+          : err instanceof Error && err.message.toLowerCase().includes("refresh")
+            ? "refresh_failed"
+            : err instanceof Error && err.message.toLowerCase().includes("api")
+              ? "api_error"
+              : "unknown";
+    return NextResponse.json(
+      { configured: true, connected: false, channels: [], error_code: code },
+      { headers: noStoreHeaders() },
+    );
   }
 }

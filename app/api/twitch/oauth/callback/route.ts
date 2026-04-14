@@ -227,15 +227,29 @@ export async function GET(request: NextRequest) {
       return redirectWithReason(request, "user_profile_failed");
     }
 
-    const response = NextResponse.redirect(
-      new URL("/?twitch=connected", request.url),
-    );
-    const isProd = process.env.NODE_ENV === "production";
+    // Use a 200 HTML response instead of a 302 redirect.
+    // Cloudflare Pages edge network can drop Set-Cookie headers on redirect
+    // responses. Setting cookies on a 200 response and redirecting via
+    // meta-refresh / JS guarantees the browser stores the cookies first.
+    const redirectTarget = new URL("/?twitch=connected", request.url).toString();
+    const htmlBody =
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">` +
+      `<meta http-equiv="refresh" content="0;url=${redirectTarget}">` +
+      `</head><body><script>location.replace(${JSON.stringify(redirectTarget)})</script>` +
+      `Connecting\u2026</body></html>`;
+    const response = new NextResponse(htmlBody, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
+    const isSecure = request.url.startsWith("https://");
 
     response.cookies.set(COOKIE_ACCESS_TOKEN, tokens.accessToken, {
       httpOnly: true,
       sameSite: "lax",
-      secure: isProd,
+      secure: isSecure,
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
@@ -243,7 +257,7 @@ export async function GET(request: NextRequest) {
       response.cookies.set(COOKIE_REFRESH_TOKEN, tokens.refreshToken, {
         httpOnly: true,
         sameSite: "lax",
-        secure: isProd,
+        secure: isSecure,
         path: "/",
         maxAge: 60 * 60 * 24 * 120,
       });
@@ -253,14 +267,14 @@ export async function GET(request: NextRequest) {
     response.cookies.set(COOKIE_USER_ID, userId, {
       httpOnly: true,
       sameSite: "lax",
-      secure: isProd,
+      secure: isSecure,
       path: "/",
       maxAge: 60 * 60 * 24 * 120,
     });
     response.cookies.set(COOKIE_EXPIRES_AT, String(tokens.expiresAt), {
       httpOnly: true,
       sameSite: "lax",
-      secure: isProd,
+      secure: isSecure,
       path: "/",
       maxAge: 60 * 60 * 24 * 120,
     });
