@@ -248,10 +248,10 @@ export default function WeatherWidget() {
           </div>
           <div className="mt-1 flex items-end justify-between">
             <div className="text-xl font-semibold text-paradise-100">
-              {Math.round(weather.temperature)}C
+              {Math.round(weather.temperature)}°C
             </div>
             <div className="text-[11px] tabular-nums text-paradise-200/80">
-              {Math.round(weather.tempMin)}C / {Math.round(weather.tempMax)}C
+              {Math.round(weather.tempMin)}°C | {Math.round(weather.tempMax)}°C
             </div>
           </div>
         </>
@@ -279,7 +279,7 @@ function ForecastRow({ day }: { day: ForecastDay }) {
         <span>{forecastWeather.label}</span>
       </div>
       <div className="text-right tabular-nums text-paradise-200/80">
-        {Math.round(day.tempMin)}C/{Math.round(day.tempMax)}C
+        {Math.round(day.tempMin)}°C/{Math.round(day.tempMax)}°C
       </div>
     </div>
   );
