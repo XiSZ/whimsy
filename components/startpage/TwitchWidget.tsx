@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { FaTwitch } from "react-icons/fa";
+import { FaCog, FaTwitch } from "react-icons/fa";
 
 interface TwitchChannel {
   login: string;
@@ -14,6 +14,7 @@ interface TwitchResponse {
   configured?: boolean;
   connected?: boolean;
   channels?: TwitchChannel[];
+  username?: string | null;
 }
 
 const TWITCH_REFRESH_SECONDS = Number(
@@ -49,6 +50,7 @@ export default function TwitchWidget() {
   const [channels, setChannels] = useState<TwitchChannel[]>([]);
   const [configured, setConfigured] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -184,6 +186,7 @@ export default function TwitchWidget() {
         setConfigured(Boolean(payload.configured));
         setConnected(Boolean(payload.connected));
         setChannels(Array.isArray(payload.channels) ? payload.channels : []);
+        setUsername(payload.username ?? null);
         setHasError(false);
       } catch {
         if (cancelled) return;
@@ -203,10 +206,7 @@ export default function TwitchWidget() {
   }, [refreshMs, maxChannels]);
 
   const visibleChannels = showAllChannels
-    ? [...channels].sort((a, b) =>
-        a.category.localeCompare(b.category) ||
-        a.name.localeCompare(b.name),
-      )
+    ? channels
     : channels.slice(0, clamp(maxChannels, 1, 10));
 
   const canExpand = channels.length > clamp(maxChannels, 1, 10);
@@ -239,13 +239,14 @@ export default function TwitchWidget() {
       await fetch("/api/twitch/oauth/disconnect", { method: "POST" });
       setConnected(false);
       setChannels([]);
+      setUsername(null);
     } finally {
       setIsDisconnecting(false);
     }
   };
 
   return (
-    <div className="fixed top-4 left-4 z-20 w-[260px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
+    <div className="fixed top-4 left-4 z-20 w-[300px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[#b8a4ff]">
           <FaTwitch className="text-xs" />
@@ -256,12 +257,18 @@ export default function TwitchWidget() {
         </div>
       </div>
 
-      <div className="mt-1 flex items-center justify-end">
+      <div className="mt-1 flex items-center justify-between">
+        {username ? (
+          <span className="text-[10px] text-paradise-200/55">@{username}</span>
+        ) : (
+          <span />
+        )}
         <button
           onClick={() => setSettingsOpen((open) => !open)}
-          className="text-[10px] uppercase tracking-wide text-paradise-200/70 transition-colors hover:text-paradise-200"
+          title={settingsOpen ? "Hide settings" : "Settings"}
+          className={`transition-colors ${settingsOpen ? "text-paradise-200" : "text-paradise-200/55 hover:text-paradise-200"}`}
         >
-          {settingsOpen ? "Hide settings" : "Settings"}
+          <FaCog className="text-[11px]" />
         </button>
       </div>
 

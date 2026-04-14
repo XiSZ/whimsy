@@ -12,6 +12,8 @@ interface TwitchTokenResponse {
 interface TwitchUsersResponse {
   data?: Array<{
     id?: string;
+    display_name?: string;
+    login?: string;
   }>;
 }
 
@@ -22,6 +24,7 @@ const TWITCH_OAUTH_REDIRECT_URI = process.env.TWITCH_OAUTH_REDIRECT_URI;
 const COOKIE_ACCESS_TOKEN = "twitch_access_token";
 const COOKIE_REFRESH_TOKEN = "twitch_refresh_token";
 const COOKIE_USER_ID = "twitch_user_id";
+const COOKIE_USER_LOGIN = "twitch_user_login";
 const COOKIE_EXPIRES_AT = "twitch_access_expires_at";
 
 export const runtime = "edge";
@@ -163,7 +166,7 @@ async function exchangeCodeForTokens(code: string, redirectUri: string) {
   };
 }
 
-async function fetchUserId(accessToken: string) {
+async function fetchUserProfile(accessToken: string) {
   if (!TWITCH_CLIENT_ID) {
     throw new Error("Missing Twitch client id");
   }
@@ -180,13 +183,16 @@ async function fetchUserId(accessToken: string) {
   }
 
   const payload = (await response.json()) as TwitchUsersResponse;
-  const userId = payload.data?.[0]?.id;
+  const user = payload.data?.[0];
+  const userId = user?.id;
 
   if (!userId) {
     throw new Error("Unable to resolve Twitch user id");
   }
 
-  return userId;
+  const userLogin = user?.display_name ?? user?.login ?? null;
+
+  return { userId, userLogin };
 }
 
 export async function GET(request: NextRequest) {
@@ -220,9 +226,10 @@ export async function GET(request: NextRequest) {
     }
 
     let userId: string;
+    let userLogin: string | null;
 
     try {
-      userId = await fetchUserId(tokens.accessToken);
+      ({ userId, userLogin } = await fetchUserProfile(tokens.accessToken));
     } catch {
       return redirectWithReason(request, "user_profile_failed");
     }
@@ -271,6 +278,15 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 120,
     });
+    if (userLogin) {
+      response.cookies.set(COOKIE_USER_LOGIN, userLogin, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: isSecure,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 120,
+      });
+    }
     response.cookies.set(COOKIE_EXPIRES_AT, String(tokens.expiresAt), {
       httpOnly: true,
       sameSite: "lax",

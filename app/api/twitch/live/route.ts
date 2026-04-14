@@ -53,6 +53,7 @@ const TWITCH_MAX_CHANNELS = Number(process.env.TWITCH_MAX_CHANNELS ?? "5");
 const COOKIE_ACCESS_TOKEN = "twitch_access_token";
 const COOKIE_REFRESH_TOKEN = "twitch_refresh_token";
 const COOKIE_USER_ID = "twitch_user_id";
+const COOKIE_USER_LOGIN = "twitch_user_login";
 const COOKIE_EXPIRES_AT = "twitch_access_expires_at";
 
 interface AuthState {
@@ -376,6 +377,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const { auth, updatedCookieAuth } = await resolveAuthState(request);
+    const userLogin = request.cookies.get(COOKIE_USER_LOGIN)?.value ?? null;
 
     const maxChannels = getRequestedMaxChannels(request);
 
@@ -424,6 +426,7 @@ export async function GET(request: NextRequest) {
         configured: true,
         connected: true,
         channels,
+        username: userLogin,
         fetchedAt: new Date().toISOString(),
       },
       { headers: noStoreHeaders() },
@@ -481,13 +484,8 @@ export async function GET(request: NextRequest) {
             : err instanceof Error && err.message.toLowerCase().includes("api")
               ? "api_error"
               : "unknown";
-    // Temporary: expose a sanitized error detail to aid production debugging.
-    // Remove once root cause is confirmed.
-    const detail = err instanceof Error
-      ? err.message.replace(/Bearer\s+\S+/gi, "Bearer [redacted]").slice(0, 120)
-      : "non_error_throw";
     return NextResponse.json(
-      { configured: true, connected: false, channels: [], error_code: code, error_detail: detail },
+      { configured: true, connected: false, channels: [], error_code: code },
       { headers: noStoreHeaders() },
     );
   }
