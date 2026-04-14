@@ -377,33 +377,38 @@ export default function TwitchWidget() {
         </div>
       ) : (
         <div className="mt-2 grid gap-2">
-          <div className={`grid gap-1.5 ${showAllChannels ? "max-h-[260px] overflow-y-auto pr-0.5" : ""}`}>
-            {visibleChannels.map((channel) => (
-              <a
-                key={channel.login}
-                href={`https://twitch.tv/${channel.login}`}
-                target="_blank"
-                rel="noreferrer"
-                className="grid grid-cols-[1fr_auto] gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-white/5"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-xs font-medium text-paradise-100">
-                    {channel.name}
+          <div className="relative">
+            <div className={`grid gap-1 ${showAllChannels ? "twitch-scroll max-h-[260px] overflow-y-auto" : ""}`}>
+              {visibleChannels.map((channel) => (
+                <a
+                  key={channel.login}
+                  href={`https://twitch.tv/${channel.login}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="grid grid-cols-[1fr_auto] gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#b8a4ff]/[0.08]"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-medium text-paradise-100">
+                      {channel.name}
+                    </div>
+                    <div className="truncate text-[11px] text-paradise-200/60">
+                      {channel.category}
+                    </div>
                   </div>
-                  <div className="truncate text-[11px] text-paradise-200/75">
-                    {channel.category}
+                  <div className="self-center text-[11px] tabular-nums text-[#c2b3ff]/90">
+                    {formatViewerCount(channel.viewerCount)}
                   </div>
-                </div>
-                <div className="self-center text-[11px] tabular-nums text-[#c2b3ff]">
-                  {formatViewerCount(channel.viewerCount)}
-                </div>
-              </a>
-            ))}
+                </a>
+              ))}
+            </div>
+            {showAllChannels && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 rounded-b bg-gradient-to-t from-[#161616]/80 to-transparent" />
+            )}
           </div>
           {canExpand ? (
             <button
               onClick={() => setShowAllChannels((open) => !open)}
-              className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/80 transition-colors hover:bg-black/30"
+              className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200/90"
             >
               {showAllChannels
                 ? `Show less (${clamp(maxChannels, 1, 10)})`
@@ -413,7 +418,7 @@ export default function TwitchWidget() {
           <button
             onClick={handleDisconnect}
             disabled={isDisconnecting}
-            className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/80 transition-colors hover:bg-black/30 disabled:opacity-60"
+            className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200/90 disabled:opacity-50"
           >
             {isDisconnecting ? "Disconnecting..." : "Disconnect"}
           </button>
