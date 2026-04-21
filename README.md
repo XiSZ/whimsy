@@ -1,12 +1,14 @@
 # whimsy
 
+> **Fork** of [asteria-team/whimsy](https://github.com/asteria-team/whimsy)
+
 A very stupid little startpage/newtab for your browser i made on a whim
 
 ## Preview
 
-![Preview](https://i.imgur.com/SBzftMX.jpeg)
+![Preview](public/preview.jpg)
 
-[Live Preview](https://whimsy.asteria.cat)
+[Live Preview](https://xisz.pages.dev/)
 
 ## Build mode
 
