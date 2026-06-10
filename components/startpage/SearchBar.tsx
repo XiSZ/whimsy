@@ -3,7 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import { FaGoogle, FaYoutube, FaGithub } from "react-icons/fa";
-import { SiBrave, SiTwitch, SiPerplexity, SiAnthropic, SiGooglegemini } from "react-icons/si";
+import { SiBrave, SiDuckduckgo, SiTwitch, SiPerplexity, SiAnthropic, SiGooglegemini } from "react-icons/si";
 import type { IconType } from "react-icons/lib";
 
 const engines = [
@@ -18,6 +18,12 @@ const engines = [
     label: "Brave",
     icon: SiBrave,
     url: "https://search.brave.com/search?q=",
+  },
+  {
+    key: "duckduckgo",
+    label: "DDG",
+    icon: SiDuckduckgo,
+    url: "https://duckduckgo.com/?q=",
   },
   {
     key: "youtube",
@@ -69,6 +75,14 @@ const placeholders: Record<EngineKey, string[]> = {
     "How to exit vim",
     "Is cereal a soup? serious question",
     "Can I legally become a medieval knight",
+  ],
+  duckduckgo: [
+    "Can the FBI see this? (no)",
+    "Google but it doesn't know my shoe size",
+    "!g but make it private",
+    "Searching in incognito but actually",
+    "The duck has never betrayed me",
+    "No filter bubble just vibes",
   ],
   brave: [
     "Can the government see me searching this?",
