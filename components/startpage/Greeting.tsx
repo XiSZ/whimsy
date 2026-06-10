@@ -30,7 +30,7 @@ export default function Greeting() {
   if (!greeting) return <div className="h-10" />;
 
   return (
-    <div className="animate-stagger-in text-4xl text-paradise-100 font-semibold tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+    <div className="animate-stagger-in text-3xl sm:text-4xl text-paradise-100 font-semibold tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
       {greeting}, <span className="text-paradise-200">Selçuk</span>!
     </div>
   );

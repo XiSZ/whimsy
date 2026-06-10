@@ -6,7 +6,7 @@ export default function HomeLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] py-8">
+    <div className="flex flex-col items-center justify-center min-h-[80vh] py-8 gap-4 md:gap-0">
       {children}
     </div>
   );

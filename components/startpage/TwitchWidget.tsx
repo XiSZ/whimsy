@@ -246,7 +246,7 @@ export default function TwitchWidget() {
   };
 
   return (
-    <div className="fixed top-4 left-4 z-20 w-[300px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
+    <div className="md:fixed md:top-4 md:left-4 md:z-20 w-full md:w-[300px] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[#b8a4ff]">
           <FaTwitch className="text-xs" />

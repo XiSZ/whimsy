@@ -62,7 +62,7 @@ export default function Bookmarks() {
       {categories.map((category, i) => (
         <Card
           key={category.title}
-          className="animate-stagger-in min-h-[180px] w-[180px]"
+          className="animate-stagger-in min-h-[160px] w-[calc(50%-0.5rem)] sm:w-[180px] sm:min-h-[180px]"
           style={{ animationDelay: `${i * STAGGER_MS}ms` }}
         >
           <div className="text-lg text-paradise-300 mb-1 text-center md:text-left">
