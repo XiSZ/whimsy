@@ -116,6 +116,93 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  const login = (
+    request.nextUrl.searchParams.get("login") ?? ""
+  ).toLowerCase();
+
+  if (!/^[a-z0-9_]{1,25}$/.test(login)) {
+    return NextResponse.json(
+      { ok: false, error: "invalid_login" },
+      { status: 400, headers: noStoreHeaders() },
+    );
+  }
+
+  if (!isAppConfigured() || !TWITCH_CLIENT_ID) {
+    return NextResponse.json(
+      { ok: false, error: "not_configured" },
+      { status: 400, headers: noStoreHeaders() },
+    );
+  }
+
+  try {
+    const { auth, updatedCookieAuth } = await resolveAuthState(request);
+
+    if (!auth) {
+      return NextResponse.json(
+        { ok: false, error: "not_connected" },
+        { status: 401, headers: noStoreHeaders() },
+      );
+    }
+
+    const headers = {
+      Authorization: `Bearer ${auth.accessToken}`,
+      "Client-Id": TWITCH_CLIENT_ID,
+    };
+
+    const userResponse = await fetch(
+      `https://api.twitch.tv/helix/users?login=${login}`,
+      { headers },
+    );
+
+    if (!userResponse.ok) {
+      return NextResponse.json(
+        { ok: false, error: "lookup_failed" },
+        { status: 502, headers: noStoreHeaders() },
+      );
+    }
+
+    const userPayload = (await userResponse.json()) as {
+      data?: Array<{ id?: string; login?: string; display_name?: string }>;
+    };
+    const user = userPayload.data?.[0];
+
+    if (!user?.id || !user.login) {
+      return NextResponse.json(
+        { ok: false, error: "user_not_found" },
+        { status: 404, headers: noStoreHeaders() },
+      );
+    }
+
+    const blockResponse = await fetch(
+      `https://api.twitch.tv/helix/users/blocks?target_user_id=${user.id}`,
+      { method: "PUT", headers },
+    );
+
+    const ok = blockResponse.ok;
+    const response = NextResponse.json(
+      {
+        ok,
+        user: ok
+          ? {
+              id: user.id,
+              login: user.login,
+              name: user.display_name ?? user.login,
+            }
+          : undefined,
+      },
+      { status: ok ? 200 : 502, headers: noStoreHeaders() },
+    );
+    applyRefreshedAuthCookies(response, request, auth, updatedCookieAuth);
+    return response;
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "unknown" },
+      { status: 502, headers: noStoreHeaders() },
+    );
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   const target = request.nextUrl.searchParams.get("target") ?? "";
 

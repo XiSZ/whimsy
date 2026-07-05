@@ -31,6 +31,16 @@ interface FollowedChannel {
   createdAt?: string;
   lastCategory?: string;
   lastTitle?: string;
+  avatarUrl?: string;
+  live?: boolean;
+  viewerCount?: number;
+}
+
+interface TwitchStreamsResponse {
+  data?: Array<{
+    user_id?: string;
+    viewer_count?: number;
+  }>;
 }
 
 interface TwitchChannelsResponse {
@@ -46,6 +56,7 @@ interface TwitchUsersResponse {
     id?: string;
     broadcaster_type?: string;
     created_at?: string;
+    profile_image_url?: string;
   }>;
 }
 
@@ -176,10 +187,16 @@ async function fetchModeratedChannels(
   return channels;
 }
 
+interface UserDetail {
+  broadcasterType: string;
+  createdAt: string;
+  avatarUrl: string;
+}
+
 async function fetchUserDetails(
   accessToken: string,
   ids: string[],
-): Promise<Map<string, { broadcasterType: string; createdAt: string }>> {
+): Promise<Map<string, UserDetail>> {
   if (!TWITCH_CLIENT_ID) {
     throw new Error("Missing Twitch client configuration");
   }
@@ -189,10 +206,7 @@ async function fetchUserDetails(
     "Client-Id": TWITCH_CLIENT_ID,
   };
 
-  const details = new Map<
-    string,
-    { broadcasterType: string; createdAt: string }
-  >();
+  const details = new Map<string, UserDetail>();
 
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += 100) {
@@ -218,6 +232,7 @@ async function fetchUserDetails(
         details.set(user.id, {
           broadcasterType: user.broadcaster_type ?? "",
           createdAt: user.created_at ?? "",
+          avatarUrl: user.profile_image_url ?? "",
         });
       }
     }),
@@ -270,6 +285,49 @@ async function fetchChannelInfo(
   );
 
   return info;
+}
+
+async function fetchLiveStreams(
+  accessToken: string,
+  ids: string[],
+): Promise<Map<string, number>> {
+  if (!TWITCH_CLIENT_ID) {
+    throw new Error("Missing Twitch client configuration");
+  }
+
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    "Client-Id": TWITCH_CLIENT_ID,
+  };
+
+  const live = new Map<string, number>();
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    chunks.push(ids.slice(i, i + 100));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const query = new URLSearchParams({ first: "100" });
+      chunk.forEach((id) => query.append("user_id", id));
+
+      const response = await fetch(
+        `https://api.twitch.tv/helix/streams?${query.toString()}`,
+        { headers },
+      );
+
+      if (!response.ok) return;
+
+      const payload = (await response.json()) as TwitchStreamsResponse;
+      for (const stream of payload.data ?? []) {
+        if (!stream.user_id) continue;
+        live.set(stream.user_id, Number(stream.viewer_count ?? 0));
+      }
+    }),
+  );
+
+  return live;
 }
 
 export const runtime = "edge";
@@ -330,26 +388,37 @@ export async function GET(request: NextRequest) {
 
     // All decoration — null/empty on failure, never break the follow list.
     const followedIds = result.channels.map((channel) => channel.id);
-    const [moderated, userDetails, channelInfo] = await Promise.all([
-      fetchModeratedChannels(activeAccessToken, auth.userId).catch(() => null),
-      fetchUserDetails(activeAccessToken, followedIds).catch(
-        () => new Map<string, { broadcasterType: string; createdAt: string }>(),
-      ),
-      fetchChannelInfo(activeAccessToken, followedIds).catch(
-        () => new Map<string, { lastCategory: string; lastTitle: string }>(),
-      ),
-    ]);
+    const [moderated, userDetails, channelInfo, liveStreams] =
+      await Promise.all([
+        fetchModeratedChannels(activeAccessToken, auth.userId).catch(
+          () => null,
+        ),
+        fetchUserDetails(activeAccessToken, followedIds).catch(
+          () => new Map<string, UserDetail>(),
+        ),
+        fetchChannelInfo(activeAccessToken, followedIds).catch(
+          () => new Map<string, { lastCategory: string; lastTitle: string }>(),
+        ),
+        fetchLiveStreams(activeAccessToken, followedIds).catch(
+          () => new Map<string, number>(),
+        ),
+      ]);
 
     for (const channel of result.channels) {
       const detail = userDetails.get(channel.id);
       if (detail) {
         channel.broadcasterType = detail.broadcasterType;
         channel.createdAt = detail.createdAt;
+        channel.avatarUrl = detail.avatarUrl;
       }
       const info = channelInfo.get(channel.id);
       if (info) {
         channel.lastCategory = info.lastCategory;
         channel.lastTitle = info.lastTitle;
+      }
+      channel.live = liveStreams.has(channel.id);
+      if (channel.live) {
+        channel.viewerCount = liveStreams.get(channel.id);
       }
     }
 

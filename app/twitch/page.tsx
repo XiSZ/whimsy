@@ -12,6 +12,9 @@ interface FollowedChannel {
   createdAt?: string;
   lastCategory?: string;
   lastTitle?: string;
+  avatarUrl?: string;
+  live?: boolean;
+  viewerCount?: number;
 }
 
 interface ModeratedChannel {
@@ -39,7 +42,13 @@ interface BlockedResponse {
   blocked?: BlockedUser[] | null;
 }
 
-type SortMode = "recent" | "oldest" | "name";
+interface ChannelDetail {
+  lastStreamedAt: string | null;
+  followers: number | null;
+}
+
+type SortMode = "recent" | "oldest" | "name" | "channel-new" | "channel-old";
+type FilterMode = "all" | "live" | "partner" | "affiliate";
 type View = "following" | "moderating" | "blocked";
 
 function formatDate(value: string): string {
@@ -50,6 +59,12 @@ function formatDate(value: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatCount(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return String(Math.max(0, Math.round(value)));
 }
 
 function matchesQuery(
@@ -80,43 +95,6 @@ function TypeBadge({ type }: { type?: string }) {
   return null;
 }
 
-function ChannelRow({
-  login,
-  name,
-  lines = [],
-  broadcasterType,
-}: {
-  login: string;
-  name: string;
-  lines?: string[];
-  broadcasterType?: string;
-}) {
-  return (
-    <a
-      href={`https://twitch.tv/${login}`}
-      target="_blank"
-      rel="noreferrer"
-      className="group grid grid-cols-[1fr_auto] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#b8a4ff]/[0.08]"
-    >
-      <div className="min-w-0">
-        <div className="truncate text-xs font-medium text-paradise-100">
-          {name}
-          <TypeBadge type={broadcasterType} />
-          <span className="ml-1.5 font-normal text-paradise-200/45">
-            @{login}
-          </span>
-        </div>
-        {lines.map((line) => (
-          <div key={line} className="truncate text-[11px] text-paradise-200/55">
-            {line}
-          </div>
-        ))}
-      </div>
-      <FaExternalLinkAlt className="text-[10px] text-paradise-200/0 transition-colors group-hover:text-paradise-200/60" />
-    </a>
-  );
-}
-
 export default function TwitchFollowingPage() {
   const [channels, setChannels] = useState<FollowedChannel[]>([]);
   const [moderated, setModerated] = useState<ModeratedChannel[] | null>(null);
@@ -124,6 +102,8 @@ export default function TwitchFollowingPage() {
   const [blockedLoaded, setBlockedLoaded] = useState(false);
   const [blockedError, setBlockedError] = useState<string | null>(null);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
+  const [blockName, setBlockName] = useState("");
+  const [isBlocking, setIsBlocking] = useState(false);
   const [total, setTotal] = useState(0);
   const [username, setUsername] = useState<string | null>(null);
   const [configured, setConfigured] = useState(true);
@@ -132,7 +112,12 @@ export default function TwitchFollowingPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [view, setView] = useState<View>("following");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [details, setDetails] = useState<
+    Record<string, ChannelDetail | "loading">
+  >({});
 
   useEffect(() => {
     let cancelled = false;
@@ -191,6 +176,30 @@ export default function TwitchFollowingPage() {
     };
   }, [view, blockedLoaded]);
 
+  const toggleExpand = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+    if (details[id]) return;
+
+    setDetails((prev) => ({ ...prev, [id]: "loading" }));
+    fetch(`/api/twitch/channel?id=${id}`, { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: ChannelDetail | null) => {
+        setDetails((prev) => ({
+          ...prev,
+          [id]: {
+            lastStreamedAt: payload?.lastStreamedAt ?? null,
+            followers: payload?.followers ?? null,
+          },
+        }));
+      })
+      .catch(() => {
+        setDetails((prev) => ({
+          ...prev,
+          [id]: { lastStreamedAt: null, followers: null },
+        }));
+      });
+  };
+
   const handleUnblock = async (id: string) => {
     setUnblockingId(id);
     setBlockedError(null);
@@ -207,23 +216,108 @@ export default function TwitchFollowingPage() {
     }
   };
 
+  const handleBlock = async () => {
+    const login = blockName.trim().toLowerCase();
+    if (!/^[a-z0-9_]{1,25}$/.test(login)) {
+      setBlockedError("Enter a valid Twitch username.");
+      return;
+    }
+
+    setIsBlocking(true);
+    setBlockedError(null);
+    try {
+      const response = await fetch(`/api/twitch/blocked?login=${login}`, {
+        method: "PUT",
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        user?: BlockedUser;
+      };
+      if (!response.ok || !payload.ok || !payload.user) {
+        throw new Error("block_failed");
+      }
+      const user = payload.user;
+      setBlocked((prev) =>
+        prev
+          ? [user, ...prev.filter((existing) => existing.id !== user.id)]
+          : [user],
+      );
+      setBlockName("");
+    } catch {
+      setBlockedError("Block failed — check the username.");
+    } finally {
+      setIsBlocking(false);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const header = [
+      "name",
+      "login",
+      "followed_at",
+      "channel_created_at",
+      "type",
+      "last_category",
+      "last_title",
+      "live",
+    ];
+    const rows = channels.map((channel) => [
+      channel.name,
+      channel.login,
+      channel.followedAt,
+      channel.createdAt ?? "",
+      channel.broadcasterType ?? "",
+      channel.lastCategory ?? "",
+      channel.lastTitle ?? "",
+      channel.live ? "yes" : "no",
+    ]);
+    const csv = [header, ...rows]
+      .map((row) =>
+        row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","),
+      )
+      .join("\n");
+
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "twitch-follows.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   const query = search.trim().toLowerCase();
 
   const visibleChannels = useMemo(() => {
-    const filtered = query
-      ? channels.filter((channel) => matchesQuery(channel, query))
-      : channels;
+    let filtered = channels;
+    if (filterMode === "live") {
+      filtered = filtered.filter((channel) => channel.live);
+    } else if (filterMode === "partner") {
+      filtered = filtered.filter(
+        (channel) => channel.broadcasterType === "partner",
+      );
+    } else if (filterMode === "affiliate") {
+      filtered = filtered.filter(
+        (channel) => channel.broadcasterType === "affiliate",
+      );
+    }
+    if (query) {
+      filtered = filtered.filter((channel) => matchesQuery(channel, query));
+    }
 
     const sorted = [...filtered];
     if (sortMode === "name") {
       sorted.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortMode === "oldest") {
       sorted.sort((a, b) => a.followedAt.localeCompare(b.followedAt));
+    } else if (sortMode === "channel-old") {
+      sorted.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+    } else if (sortMode === "channel-new") {
+      sorted.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
     } else {
       sorted.sort((a, b) => b.followedAt.localeCompare(a.followedAt));
     }
     return sorted;
-  }, [channels, query, sortMode]);
+  }, [channels, query, sortMode, filterMode]);
 
   const visibleModerated = useMemo(() => {
     const list = moderated ?? [];
@@ -247,6 +341,9 @@ export default function TwitchFollowingPage() {
         ? "border-[#7d66d8]/70 bg-[#7d66d8]/20 text-[#d8cfff]"
         : "border-[#2d2d2d]/80 bg-black/20 text-paradise-200/70 hover:bg-black/30 hover:text-paradise-200"
     }`;
+
+  const controlClass =
+    "rounded-md border border-[#2d2d2d]/80 bg-black/25 px-2 py-1 text-xs text-paradise-100";
 
   const reconnectHint = (permission: string) => (
     <div className="grid gap-2">
@@ -343,17 +440,40 @@ export default function TwitchFollowingPage() {
                 className="w-full rounded-md border border-[#2d2d2d]/80 bg-black/25 px-2 py-1 text-xs text-paradise-100 placeholder:text-paradise-200/40 focus:outline-none focus:border-[#7d66d8]/70"
               />
               {view === "following" ? (
-                <select
-                  value={sortMode}
-                  onChange={(event) =>
-                    setSortMode(event.target.value as SortMode)
-                  }
-                  className="rounded-md border border-[#2d2d2d]/80 bg-black/25 px-2 py-1 text-xs text-paradise-100"
-                >
-                  <option value="recent">Newest follows</option>
-                  <option value="oldest">Oldest follows</option>
-                  <option value="name">Name A–Z</option>
-                </select>
+                <>
+                  <select
+                    value={filterMode}
+                    onChange={(event) =>
+                      setFilterMode(event.target.value as FilterMode)
+                    }
+                    className={controlClass}
+                  >
+                    <option value="all">All</option>
+                    <option value="live">Live now</option>
+                    <option value="partner">Partners</option>
+                    <option value="affiliate">Affiliates</option>
+                  </select>
+                  <select
+                    value={sortMode}
+                    onChange={(event) =>
+                      setSortMode(event.target.value as SortMode)
+                    }
+                    className={controlClass}
+                  >
+                    <option value="recent">Newest follows</option>
+                    <option value="oldest">Oldest follows</option>
+                    <option value="name">Name A–Z</option>
+                    <option value="channel-new">Newest channels</option>
+                    <option value="channel-old">Oldest channels</option>
+                  </select>
+                  <button
+                    onClick={handleExportCsv}
+                    title="Download the full list as CSV"
+                    className="whitespace-nowrap rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200"
+                  >
+                    Export CSV
+                  </button>
+                </>
               ) : null}
             </div>
 
@@ -363,35 +483,108 @@ export default function TwitchFollowingPage() {
                   {channels.length === 0
                     ? emptyRow("You are not following anyone yet.")
                     : visibleChannels.length === 0
-                      ? emptyRow(`No channels match “${search}”.`)
-                      : visibleChannels.map((channel) => (
-                          <ChannelRow
-                            key={channel.id}
-                            login={channel.login}
-                            name={channel.name}
-                            broadcasterType={channel.broadcasterType}
-                            lines={[
-                              [channel.lastCategory, channel.lastTitle]
-                                .filter(Boolean)
-                                .join(" — "),
-                              [
-                                channel.followedAt
-                                  ? `followed ${formatDate(channel.followedAt)}`
-                                  : "",
-                                channel.createdAt
-                                  ? `created ${formatDate(channel.createdAt)}`
-                                  : "",
-                              ]
-                                .filter(Boolean)
-                                .join(" · "),
-                            ].filter(Boolean)}
-                          />
-                        ))}
+                      ? emptyRow("No channels match the current filters.")
+                      : visibleChannels.map((channel) => {
+                          const detail = details[channel.id];
+                          const isExpanded = expandedId === channel.id;
+                          return (
+                            <div
+                              key={channel.id}
+                              className="rounded-md transition-colors hover:bg-[#b8a4ff]/[0.08]"
+                            >
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => toggleExpand(channel.id)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    toggleExpand(channel.id);
+                                  }
+                                }}
+                                className="grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 px-2 py-1.5"
+                              >
+                                {channel.avatarUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={channel.avatarUrl}
+                                    alt=""
+                                    loading="lazy"
+                                    className="h-8 w-8 rounded-full"
+                                  />
+                                ) : (
+                                  <div className="h-8 w-8 rounded-full bg-black/25" />
+                                )}
+                                <div className="min-w-0">
+                                  <div className="truncate text-xs font-medium text-paradise-100">
+                                    {channel.name}
+                                    <TypeBadge type={channel.broadcasterType} />
+                                    <span className="ml-1.5 font-normal text-paradise-200/45">
+                                      @{channel.login}
+                                    </span>
+                                  </div>
+                                  {channel.lastCategory || channel.lastTitle ? (
+                                    <div className="truncate text-[11px] text-paradise-200/55">
+                                      {[channel.lastCategory, channel.lastTitle]
+                                        .filter(Boolean)
+                                        .join(" — ")}
+                                    </div>
+                                  ) : null}
+                                  <div className="truncate text-[11px] text-paradise-200/55">
+                                    {[
+                                      channel.followedAt
+                                        ? `followed ${formatDate(channel.followedAt)}`
+                                        : "",
+                                      channel.createdAt
+                                        ? `created ${formatDate(channel.createdAt)}`
+                                        : "",
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {channel.live ? (
+                                    <span className="flex items-center gap-1 text-[11px] tabular-nums text-[#c2b3ff]/90">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                      {formatCount(channel.viewerCount ?? 0)}
+                                    </span>
+                                  ) : null}
+                                  <a
+                                    href={`https://twitch.tv/${channel.login}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title="Open on Twitch"
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="text-paradise-200/40 transition-colors hover:text-paradise-200"
+                                  >
+                                    <FaExternalLinkAlt className="text-[10px]" />
+                                  </a>
+                                </div>
+                              </div>
+                              {isExpanded ? (
+                                <div className="px-2 pb-1.5 pl-12 text-[11px] text-paradise-200/70">
+                                  {!detail || detail === "loading"
+                                    ? "Loading details..."
+                                    : [
+                                        detail.lastStreamedAt
+                                          ? `last streamed ${formatDate(detail.lastStreamedAt)}`
+                                          : "no saved VODs (may stream without saving them)",
+                                        detail.followers !== null
+                                          ? `${formatCount(detail.followers)} followers`
+                                          : "",
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                 </div>
                 <div className="text-[10px] text-paradise-200/45">
+                  Click a channel for last-streamed date and follower count.
                   Twitch removed follow management from its API — to unfollow,
-                  open the channel and unfollow there. Category/title show the
-                  channel&apos;s most recent stream.
+                  open the channel and unfollow there.
                 </div>
               </>
             ) : view === "moderating" ? (
@@ -404,11 +597,21 @@ export default function TwitchFollowingPage() {
                     : visibleModerated.length === 0
                       ? emptyRow(`No channels match “${search}”.`)
                       : visibleModerated.map((channel) => (
-                          <ChannelRow
+                          <a
                             key={channel.id}
-                            login={channel.login}
-                            name={channel.name}
-                          />
+                            href={`https://twitch.tv/${channel.login}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group grid grid-cols-[1fr_auto] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#b8a4ff]/[0.08]"
+                          >
+                            <div className="truncate text-xs font-medium text-paradise-100">
+                              {channel.name}
+                              <span className="ml-1.5 font-normal text-paradise-200/45">
+                                @{channel.login}
+                              </span>
+                            </div>
+                            <FaExternalLinkAlt className="text-[10px] text-paradise-200/0 transition-colors group-hover:text-paradise-200/60" />
+                          </a>
                         ))}
                 </div>
               )
@@ -420,6 +623,25 @@ export default function TwitchFollowingPage() {
               reconnectHint("blocked-users")
             ) : (
               <>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={blockName}
+                    onChange={(event) => setBlockName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") handleBlock();
+                    }}
+                    placeholder="Block by username..."
+                    className="w-full rounded-md border border-[#2d2d2d]/80 bg-black/25 px-2 py-1 text-xs text-paradise-100 placeholder:text-paradise-200/40 focus:outline-none focus:border-[#7d66d8]/70"
+                  />
+                  <button
+                    onClick={handleBlock}
+                    disabled={isBlocking || !blockName.trim()}
+                    className="whitespace-nowrap rounded-md border border-[#7d66d8]/70 bg-[#7d66d8]/20 px-2 py-1 text-xs font-medium text-[#d8cfff] transition-colors hover:bg-[#7d66d8]/30 disabled:opacity-50"
+                  >
+                    {isBlocking ? "Blocking..." : "Block"}
+                  </button>
+                </div>
                 {blockedError ? (
                   <div className="text-[11px] text-[#ffb1b1]">
                     {blockedError}
