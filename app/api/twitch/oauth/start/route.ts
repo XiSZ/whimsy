@@ -56,7 +56,10 @@ export async function GET(request: NextRequest) {
   authUrl.searchParams.set("client_id", TWITCH_CLIENT_ID);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("scope", "user:read:follows");
+  authUrl.searchParams.set(
+    "scope",
+    "user:read:follows user:read:moderated_channels user:read:blocked_users user:manage:blocked_users",
+  );
   authUrl.searchParams.set("state", state);
 
   return NextResponse.redirect(authUrl);
