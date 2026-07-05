@@ -315,7 +315,7 @@ export default function TwitchWidget() {
             href="/twitch"
             className="col-span-2 mt-1 rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-center text-[11px] text-paradise-200/80 transition-colors hover:bg-black/30 hover:text-paradise-200"
           >
-            Manage following list →
+            Manage Twitch →
           </a>
         </div>
       ) : null}
