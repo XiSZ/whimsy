@@ -205,7 +205,13 @@ export async function GET(request: NextRequest) {
     return redirectWithReason(request, `provider_${oauthError}`);
   }
 
-  if (!code || !state || !(await isValidState(state))) {
+  const stateCookie = request.cookies.get("twitch_oauth_state")?.value;
+  if (
+    !code ||
+    !state ||
+    state !== stateCookie ||
+    !(await isValidState(state))
+  ) {
     return redirectWithReason(request, "state_mismatch");
   }
 
@@ -294,6 +300,7 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 120,
     });
+    response.cookies.delete("twitch_oauth_state");
 
     return response;
   } catch {

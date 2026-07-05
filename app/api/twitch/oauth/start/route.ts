@@ -62,5 +62,15 @@ export async function GET(request: NextRequest) {
   );
   authUrl.searchParams.set("state", state);
 
-  return NextResponse.redirect(authUrl);
+  const response = NextResponse.redirect(authUrl);
+  // Bind the state to this browser so a signed state from another session
+  // cannot complete the callback here (login CSRF).
+  response.cookies.set("twitch_oauth_state", state, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: request.url.startsWith("https://"),
+    path: "/",
+    maxAge: 600,
+  });
+  return response;
 }

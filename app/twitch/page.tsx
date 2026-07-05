@@ -273,7 +273,14 @@ export default function TwitchFollowingPage() {
     ]);
     const csv = [header, ...rows]
       .map((row) =>
-        row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","),
+        row
+          .map((value) => {
+            const text = String(value).replaceAll('"', '""');
+            // Leading ' neutralizes Excel formula injection — titles and
+            // names are streamer-controlled input.
+            return `"${/^[=+\-@\t\r]/.test(text) ? `'${text}` : text}"`;
+          })
+          .join(","),
       )
       .join("\n");
 
