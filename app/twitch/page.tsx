@@ -250,6 +250,23 @@ export default function TwitchFollowingPage() {
     }
   };
 
+  const downloadFile = (content: string, type: string, filename: string) => {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportJson = () => {
+    downloadFile(
+      JSON.stringify(channels, null, 2),
+      "application/json",
+      "twitch-follows.json",
+    );
+  };
+
   const handleExportCsv = () => {
     const header = [
       "name",
@@ -284,12 +301,7 @@ export default function TwitchFollowingPage() {
       )
       .join("\n");
 
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "twitch-follows.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadFile(csv, "text/csv", "twitch-follows.csv");
   };
 
   const query = search.trim().toLowerCase();
@@ -478,7 +490,14 @@ export default function TwitchFollowingPage() {
                     title="Download the full list as CSV"
                     className="whitespace-nowrap rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200"
                   >
-                    Export CSV
+                    CSV
+                  </button>
+                  <button
+                    onClick={handleExportJson}
+                    title="Download the full list as JSON"
+                    className="whitespace-nowrap rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200"
+                  >
+                    JSON
                   </button>
                 </>
               ) : null}
