@@ -38,3 +38,8 @@ next-env.d.ts
 # contentlayer
 .contentlayer
 .env
+
+# local agent tooling state
+.claude-flow/
+.claude/
+.mypy_cache/
