@@ -129,6 +129,8 @@ function weatherCodeToPresentation(
 }
 
 function formatWeekday(date: string): string {
+  // en-CA formats as YYYY-MM-DD in local time, matching the API's local dates.
+  if (date === new Date().toLocaleDateString("en-CA")) return "Today";
   return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
     weekday: "short",
   });
@@ -245,38 +247,33 @@ export default function WeatherWidget() {
           {WEATHER_LABEL}
         </div>
         <div className="text-[10px] uppercase tracking-wide text-paradise-100/70">
-          {view === "daily" ? "Daily forecast" : "3-day forecast"}
+          {view === "daily" ? "Now" : "3-day forecast"}
         </div>
       </div>
 
       {view === "daily" ? (
         <>
-          <div className="mt-1 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm text-paradise-100">
+          <div className="mt-1.5 flex items-center justify-between gap-3">
+            <div className="text-2xl font-semibold text-paradise-100">
+              {Math.round(weather.temperature)}°C
+            </div>
+            <div
+              className="flex min-w-0 items-center gap-1.5"
+              title={currentWeather.description}
+            >
+              <currentWeather.Icon
+                className={`shrink-0 text-2xl ${currentWeather.accentClassName}`}
+              />
+              <span className="truncate text-sm text-paradise-100">
                 {currentWeather.label}
-              </div>
-              <div className="mt-0.5 text-[11px] leading-tight text-paradise-200/70">
-                {currentWeather.description}
-              </div>
+              </span>
             </div>
-            <currentWeather.Icon
-              className={`mt-0.5 shrink-0 text-2xl ${currentWeather.accentClassName}`}
-            />
           </div>
-          <div className="mt-1 flex items-end justify-between">
-            <div>
-              <div className="text-[10px] uppercase tracking-wide text-paradise-200/60">
-                Now
-              </div>
-              <div className="text-xl font-semibold text-paradise-100">
-                {Math.round(weather.temperature)}°C
-              </div>
-            </div>
-            <div className="text-[11px] tabular-nums text-paradise-200/80">
-              Min {Math.round(weather.tempMin)}°C | Max{" "}
-              {Math.round(weather.tempMax)}°C
-            </div>
+          <div
+            className="mt-0.5 text-[11px] tabular-nums text-paradise-200/80"
+            title={`Min ${Math.round(weather.tempMin)}°C, Max ${Math.round(weather.tempMax)}°C`}
+          >
+            ↓{Math.round(weather.tempMin)}° ↑{Math.round(weather.tempMax)}°
           </div>
         </>
       ) : (
