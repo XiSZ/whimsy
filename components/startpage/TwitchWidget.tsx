@@ -384,9 +384,7 @@ export default function TwitchWidget() {
       ) : (
         <div className="mt-2 grid gap-2">
           <div className="relative">
-            <div
-              className={`twitch-scroll grid gap-1 overflow-y-auto ${showAllChannels ? "max-h-[260px]" : "max-h-[calc(100dvh-330px)]"}`}
-            >
+            <div className="twitch-scroll grid max-h-[calc(100dvh-330px)] gap-1 overflow-y-auto">
               {visibleChannels.map((channel) => (
                 <a
                   key={channel.login}
@@ -409,7 +407,7 @@ export default function TwitchWidget() {
                 </a>
               ))}
             </div>
-            {showAllChannels && (
+            {visibleChannels.length > 6 && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 rounded-b bg-gradient-to-t from-[#161616]/80 to-transparent" />
             )}
           </div>
