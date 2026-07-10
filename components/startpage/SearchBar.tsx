@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { FaGoogle, FaYoutube, FaGithub, FaExternalLinkAlt } from "react-icons/fa";
+import { FaGoogle, FaYoutube, FaGithub } from "react-icons/fa";
+import { useAppSettings } from "./settings";
 import { SiBrave, SiDuckduckgo, SiTwitch, SiPerplexity, SiAnthropic, SiGooglegemini } from "react-icons/si";
 import type { IconType } from "react-icons/lib";
 
@@ -172,11 +173,11 @@ function randomPlaceholder(engine: EngineKey) {
 
 export default function SearchBar() {
   const [currentEngine, setCurrentEngine] = useState<EngineKey>("google");
-  const [openInNewTab, setOpenInNewTab] = useState(false);
+  const [settings] = useAppSettings();
   const [value, setValue] = useState("");
   const [placeholder, setPlaceholder] = useState(() => randomPlaceholder("google"));
 
-  // Restore last-used engine + open mode; runs before the save effect below.
+  // Restore last-used engine; runs before the save effect below.
   useEffect(() => {
     try {
       const stored = JSON.parse(
@@ -187,7 +188,6 @@ export default function SearchBar() {
         setCurrentEngine(engine.key);
         setPlaceholder(randomPlaceholder(engine.key));
       }
-      if (typeof stored.newTab === "boolean") setOpenInNewTab(stored.newTab);
     } catch {
       // Corrupt prefs — defaults win.
     }
@@ -197,15 +197,15 @@ export default function SearchBar() {
     try {
       localStorage.setItem(
         SEARCH_PREFS_KEY,
-        JSON.stringify({ engine: currentEngine, newTab: openInNewTab }),
+        JSON.stringify({ engine: currentEngine }),
       );
     } catch {
       // Storage unavailable — prefs just won't stick.
     }
-  }, [currentEngine, openInNewTab]);
+  }, [currentEngine]);
 
   const openResult = (url: string) => {
-    if (openInNewTab) window.open(url, "_blank");
+    if (settings.openInNewTab) window.open(url, "_blank");
     else window.location.href = url;
   };
 
@@ -298,24 +298,6 @@ export default function SearchBar() {
             </button>
           );
         })}
-
-        <button
-          onClick={() => setOpenInNewTab((prev) => !prev)}
-          title={
-            openInNewTab
-              ? "Results open in a new tab — click for same tab"
-              : "Results open in this tab — click for new tab"
-          }
-          className={clsx(
-            "ml-2 flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm border transition-all duration-300 cursor-pointer",
-            openInNewTab
-              ? "bg-paradise-300 text-paradise-bg border-paradise-300 font-medium"
-              : "bg-[#161616]/62 border-[#2d2d2d]/70 text-paradise-100/85 hover:border-paradise-100/30 hover:text-paradise-100 backdrop-blur-lg backdrop-saturate-150",
-          )}
-        >
-          <FaExternalLinkAlt className="text-xs" />
-          <span className="hidden sm:inline">New tab</span>
-        </button>
       </div>
     </div>
   );
