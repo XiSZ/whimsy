@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaArrowLeft, FaExternalLinkAlt, FaTwitch } from "react-icons/fa";
 
 interface FollowedChannel {
@@ -47,9 +48,32 @@ interface ChannelDetail {
   followers: number | null;
 }
 
-type SortMode = "recent" | "oldest" | "name" | "channel-new" | "channel-old";
-type FilterMode = "all" | "live" | "partner" | "affiliate";
-type View = "following" | "moderating" | "blocked";
+const SORT_MODES = [
+  "recent",
+  "oldest",
+  "name",
+  "channel-new",
+  "channel-old",
+  "followers",
+  "viewers",
+] as const;
+const FILTER_MODES = ["all", "live", "partner", "affiliate"] as const;
+const VIEWS = ["following", "moderating", "blocked"] as const;
+
+type SortMode = (typeof SORT_MODES)[number];
+type FilterMode = (typeof FILTER_MODES)[number];
+type View = (typeof VIEWS)[number];
+
+const PREFS_KEY = "twitch-dashboard-prefs";
+const FOLLOWER_CACHE_KEY = "twitch-follower-counts";
+const FOLLOWER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function pick<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): T | null {
+  return allowed.includes(value as T) ? (value as T) : null;
+}
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -112,6 +136,11 @@ export default function TwitchFollowingPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
+  const [followerCounts, setFollowerCounts] = useState<Record<
+    string,
+    number | null
+  > | null>(null);
+  const followersFetchStarted = useRef(false);
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [view, setView] = useState<View>("following");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -119,10 +148,41 @@ export default function TwitchFollowingPage() {
     Record<string, ChannelDetail | "loading">
   >({});
 
+  // Restore sort/filter/tab prefs. Runs before the save effect below, so the
+  // stored values are read before that effect first writes.
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem(PREFS_KEY) ?? "{}",
+      ) as Record<string, unknown>;
+      const sort = pick(stored.sortMode, SORT_MODES);
+      const filter = pick(stored.filterMode, FILTER_MODES);
+      const storedView = pick(stored.view, VIEWS);
+      if (sort) setSortMode(sort);
+      if (filter) setFilterMode(filter);
+      if (storedView) setView(storedView);
+    } catch {
+      // Corrupt prefs — defaults win.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        PREFS_KEY,
+        JSON.stringify({ sortMode, filterMode, view }),
+      );
+    } catch {
+      // Storage unavailable — prefs just won't stick.
+    }
+  }, [sortMode, filterMode, view]);
+
   useEffect(() => {
     let cancelled = false;
+    let lastLoadAt = 0;
 
     const load = async () => {
+      lastLoadAt = Date.now();
       try {
         const response = await fetch("/api/twitch/following", {
           cache: "no-store",
@@ -149,8 +209,19 @@ export default function TwitchFollowingPage() {
     };
 
     load();
+
+    // Live badges go stale on a long-lived tab — refetch when it regains
+    // focus, at most once a minute.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastLoadAt < 60_000) return;
+      load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
@@ -306,6 +377,66 @@ export default function TwitchFollowingPage() {
 
   const query = search.trim().toLowerCase();
 
+  // Follower totals are one Twitch call per channel, so only fetch them the
+  // first time the "Most followed" sort is picked, in server-friendly chunks.
+  // Counts are cached in localStorage for 24h (they move slowly); only ids
+  // missing from the cache are fetched. The list reorders as chunks land.
+  useEffect(() => {
+    if (sortMode !== "followers" || channels.length === 0) return;
+    if (followersFetchStarted.current) return;
+    followersFetchStarted.current = true;
+
+    let cachedAt = 0;
+    let cached: Record<string, number | null> = {};
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem(FOLLOWER_CACHE_KEY) ?? "",
+      ) as { at?: number; counts?: Record<string, number | null> };
+      if (Date.now() - Number(stored?.at ?? 0) < FOLLOWER_CACHE_TTL_MS) {
+        cachedAt = Number(stored.at);
+        cached = stored.counts ?? {};
+      }
+    } catch {
+      // No usable cache.
+    }
+    if (Object.keys(cached).length > 0) setFollowerCounts(cached);
+
+    const missing = channels
+      .map((channel) => channel.id)
+      .filter((id) => !(id in cached));
+
+    (async () => {
+      const merged = { ...cached };
+      for (let i = 0; i < missing.length; i += 35) {
+        try {
+          const response = await fetch(
+            `/api/twitch/followers?ids=${missing.slice(i, i + 35).join(",")}`,
+          );
+          if (!response.ok) continue;
+          const payload = (await response.json()) as {
+            counts?: Record<string, number | null>;
+          };
+          Object.assign(merged, payload?.counts ?? {});
+          setFollowerCounts({ ...merged });
+        } catch {
+          // Skip failed chunks — those channels just sort to the bottom.
+        }
+      }
+      if (missing.length > 0) {
+        try {
+          // Keep the original stamp when topping up a fresh cache, so the
+          // whole thing still expires 24h after the last full fetch.
+          localStorage.setItem(
+            FOLLOWER_CACHE_KEY,
+            JSON.stringify({ at: cachedAt || Date.now(), counts: merged }),
+          );
+        } catch {
+          // Storage full/unavailable — counts just aren't cached.
+        }
+      }
+    })();
+  }, [sortMode, channels]);
+
   const visibleChannels = useMemo(() => {
     let filtered = channels;
     if (filterMode === "live") {
@@ -332,11 +463,20 @@ export default function TwitchFollowingPage() {
       sorted.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
     } else if (sortMode === "channel-new") {
       sorted.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+    } else if (sortMode === "followers") {
+      sorted.sort(
+        (a, b) =>
+          (followerCounts?.[b.id] ?? -1) - (followerCounts?.[a.id] ?? -1),
+      );
+    } else if (sortMode === "viewers") {
+      sorted.sort(
+        (a, b) => (b.viewerCount ?? -1) - (a.viewerCount ?? -1),
+      );
     } else {
       sorted.sort((a, b) => b.followedAt.localeCompare(a.followedAt));
     }
     return sorted;
-  }, [channels, query, sortMode, filterMode]);
+  }, [channels, query, sortMode, filterMode, followerCounts]);
 
   const visibleModerated = useMemo(() => {
     const list = moderated ?? [];
@@ -388,13 +528,13 @@ export default function TwitchFollowingPage() {
       <div className="rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-4 py-3 backdrop-blur-lg backdrop-saturate-150">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-[12px] uppercase tracking-wide text-[#b8a4ff]">
-            <a
+            <Link
               href="/"
               title="Back to startpage"
               className="text-paradise-200/55 transition-colors hover:text-paradise-200"
             >
               <FaArrowLeft />
-            </a>
+            </Link>
             <FaTwitch />
             Channels
           </div>
@@ -484,6 +624,8 @@ export default function TwitchFollowingPage() {
                     <option value="name">Name A–Z</option>
                     <option value="channel-new">Newest channels</option>
                     <option value="channel-old">Oldest channels</option>
+                    <option value="followers">Most followed</option>
+                    <option value="viewers">Most viewers (live)</option>
                   </select>
                   <button
                     onClick={handleExportCsv}

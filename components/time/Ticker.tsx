@@ -46,14 +46,14 @@ const DecimalColumn = ({ isComma, digitStyles }: DecimalColumnProps) => (
 
 // Individual number element component
 const NumberColumn = memo(
-  ({
+  function NumberColumn({
     digit,
     delta,
     incrementColor,
     decrementColor,
     digitStyles,
     showColorsWhenValueChanges,
-  }: NumberColumnProps) => {
+  }: NumberColumnProps) {
     const [position, setPosition] = useState<number>(0);
     const [animationClass, setAnimationClass] = useState<string | null>(null);
     const [movementType, setMovementType] = useState<
