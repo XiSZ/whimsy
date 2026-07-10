@@ -249,12 +249,17 @@ export default function Grainient({
     ro.observe(container);
     setSize();
 
+    // Reduced motion: render a single static frame instead of animating.
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
     let raf = 0;
     const t0 = performance.now();
     const loop = (t: number) => {
       (program.uniforms.iTime.value as number) = (t - t0) * 0.001;
       renderer.render({ scene: mesh });
-      raf = requestAnimationFrame(loop);
+      if (!reduceMotion) raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
 

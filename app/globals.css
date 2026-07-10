@@ -103,3 +103,17 @@ html {
 .twitch-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(160, 130, 220, 0.55);
 }
+
+/* --- Reduced motion --- */
+/* Collapse animations/transitions to their end state so opacity-0 entrance
+   animations still leave content visible. The WebGL background handles this
+   itself by rendering a single static frame. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

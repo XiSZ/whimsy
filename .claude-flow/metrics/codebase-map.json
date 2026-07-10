@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-07-10T19:55:03.682Z",
+  "projectRoot": "D:\\Dokumente\\GitHub\\whimsy",
+  "structure": {
+    "hasPackageJson": true,
+    "hasTsConfig": true,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1783713303683
+}

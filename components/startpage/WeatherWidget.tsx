@@ -6,6 +6,7 @@ import {
   WiCloud,
   WiDaySunny,
   WiFog,
+  WiNightClear,
   WiRain,
   WiSnow,
   WiThunderstorm,
@@ -21,6 +22,7 @@ interface ForecastDay {
 interface WeatherData {
   temperature: number;
   weatherCode: number;
+  isDay: boolean;
   tempMin: number;
   tempMax: number;
   forecast: ForecastDay[];
@@ -33,7 +35,19 @@ interface WeatherPresentation {
   accentClassName: string;
 }
 
-function weatherCodeToPresentation(code: number): WeatherPresentation {
+function weatherCodeToPresentation(
+  code: number,
+  isDay = true,
+): WeatherPresentation {
+  if (code <= 1 && !isDay) {
+    return {
+      label: code === 0 ? "Clear" : "Mostly clear",
+      description: "Calm, clear night skies",
+      Icon: WiNightClear,
+      accentClassName: "text-indigo-200",
+    };
+  }
+
   if (code === 0) {
     return {
       label: "Clear",
@@ -147,7 +161,7 @@ export default function WeatherWidget() {
 
   const endpoint = useMemo(
     () =>
-      `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_COORDS.lat}&longitude=${WEATHER_COORDS.lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_COORDS.lat}&longitude=${WEATHER_COORDS.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3`,
     [],
   );
 
@@ -187,6 +201,7 @@ export default function WeatherWidget() {
         setWeather({
           temperature: Number(data?.current?.temperature_2m ?? 0),
           weatherCode: Number(data?.current?.weather_code ?? 0),
+          isDay: Number(data?.current?.is_day ?? 1) === 1,
           tempMin: Number(forecast[0]?.tempMin ?? 0),
           tempMax: Number(forecast[0]?.tempMax ?? 0),
           forecast,
@@ -218,7 +233,10 @@ export default function WeatherWidget() {
 
   if (!hasValidConfig || hasError || !weather) return null;
 
-  const currentWeather = weatherCodeToPresentation(weather.weatherCode);
+  const currentWeather = weatherCodeToPresentation(
+    weather.weatherCode,
+    weather.isDay,
+  );
 
   return (
     <div className="md:fixed md:top-4 md:right-4 md:z-20 w-full md:w-[240px] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
@@ -247,11 +265,17 @@ export default function WeatherWidget() {
             />
           </div>
           <div className="mt-1 flex items-end justify-between">
-            <div className="text-xl font-semibold text-paradise-100">
-              {Math.round(weather.temperature)}°C
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-paradise-200/60">
+                Now
+              </div>
+              <div className="text-xl font-semibold text-paradise-100">
+                {Math.round(weather.temperature)}°C
+              </div>
             </div>
             <div className="text-[11px] tabular-nums text-paradise-200/80">
-              {Math.round(weather.tempMin)}°C | {Math.round(weather.tempMax)}°C
+              Min {Math.round(weather.tempMin)}°C | Max{" "}
+              {Math.round(weather.tempMax)}°C
             </div>
           </div>
         </>
@@ -279,7 +303,7 @@ function ForecastRow({ day }: { day: ForecastDay }) {
         <span>{forecastWeather.label}</span>
       </div>
       <div className="text-right tabular-nums text-paradise-200/80">
-        {Math.round(day.tempMin)}°C/{Math.round(day.tempMax)}°C
+        {Math.round(day.tempMin)}°C | {Math.round(day.tempMax)}°C
       </div>
     </div>
   );
