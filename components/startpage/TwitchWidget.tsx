@@ -25,6 +25,10 @@ const TWITCH_MAX_CHANNELS = Number(process.env.NEXT_PUBLIC_TWITCH_MAX_CHANNELS);
 const TWITCH_REFRESH_KEY = "whimsy.twitch.refreshSeconds";
 const TWITCH_MAX_CHANNELS_KEY = "whimsy.twitch.maxChannels";
 const TWITCH_FETCH_LIMIT = 100;
+// The list is viewport-height-capped with its own scrollbar, so a high
+// channel count can never collide with the fixed settings button below.
+const MAX_CHANNELS_CAP = 25;
+const MAX_CHANNELS_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -37,7 +41,7 @@ function getDefaultRefreshSeconds(): number {
 
 function getDefaultMaxChannels(): number {
   if (!Number.isFinite(TWITCH_MAX_CHANNELS)) return 5;
-  return clamp(Math.round(TWITCH_MAX_CHANNELS), 1, 10);
+  return clamp(Math.round(TWITCH_MAX_CHANNELS), 1, MAX_CHANNELS_CAP);
 }
 
 function formatViewerCount(value: number): string {
@@ -81,7 +85,7 @@ export default function TwitchWidget() {
     }
 
     if (Number.isFinite(storedMaxChannels)) {
-      setMaxChannels(clamp(Math.round(storedMaxChannels), 1, 10));
+      setMaxChannels(clamp(Math.round(storedMaxChannels), 1, MAX_CHANNELS_CAP));
     }
   }, []);
 
@@ -207,9 +211,9 @@ export default function TwitchWidget() {
 
   const visibleChannels = showAllChannels
     ? channels
-    : channels.slice(0, clamp(maxChannels, 1, 10));
+    : channels.slice(0, clamp(maxChannels, 1, MAX_CHANNELS_CAP));
 
-  const canExpand = channels.length > clamp(maxChannels, 1, 10);
+  const canExpand = channels.length > clamp(maxChannels, 1, MAX_CHANNELS_CAP);
 
   const handleRefreshSecondsChange = (
     event: ChangeEvent<HTMLSelectElement>,
@@ -222,7 +226,7 @@ export default function TwitchWidget() {
   };
 
   const handleMaxChannelsChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const value = clamp(Number(event.target.value), 1, 10);
+    const value = clamp(Number(event.target.value), 1, MAX_CHANNELS_CAP);
     setMaxChannels(value);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(TWITCH_MAX_CHANNELS_KEY, String(value));
@@ -299,16 +303,11 @@ export default function TwitchWidget() {
             onChange={handleMaxChannelsChange}
             className="rounded border border-[#2d2d2d]/80 bg-black/25 px-1 py-0.5 text-[11px] text-paradise-100"
           >
-            <option value={1}>1</option>
-            <option value={2}>2</option>
-            <option value={3}>3</option>
-            <option value={4}>4</option>
-            <option value={5}>5</option>
-            <option value={6}>6</option>
-            <option value={7}>7</option>
-            <option value={8}>8</option>
-            <option value={9}>9</option>
-            <option value={10}>10</option>
+            {MAX_CHANNELS_OPTIONS.map((count) => (
+              <option key={count} value={count}>
+                {count}
+              </option>
+            ))}
           </select>
 
           <a
@@ -386,7 +385,7 @@ export default function TwitchWidget() {
         <div className="mt-2 grid gap-2">
           <div className="relative">
             <div
-              className={`grid gap-1 ${showAllChannels ? "twitch-scroll max-h-[260px] overflow-y-auto" : ""}`}
+              className={`twitch-scroll grid gap-1 overflow-y-auto ${showAllChannels ? "max-h-[260px]" : "max-h-[calc(100dvh-330px)]"}`}
             >
               {visibleChannels.map((channel) => (
                 <a
@@ -420,7 +419,7 @@ export default function TwitchWidget() {
               className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200/90"
             >
               {showAllChannels
-                ? `Show less (${clamp(maxChannels, 1, 10)})`
+                ? `Show less (${clamp(maxChannels, 1, MAX_CHANNELS_CAP)})`
                 : `Show all (${channels.length})`}
             </button>
           ) : null}
