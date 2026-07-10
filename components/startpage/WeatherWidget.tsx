@@ -302,8 +302,11 @@ function ForecastRow({ day }: { day: ForecastDay }) {
         />
         <span>{forecastWeather.label}</span>
       </div>
-      <div className="text-right tabular-nums text-paradise-200/80">
-        {Math.round(day.tempMin)}°C | {Math.round(day.tempMax)}°C
+      <div
+        className="text-right tabular-nums text-paradise-200/80"
+        title={`Min ${Math.round(day.tempMin)}°C, Max ${Math.round(day.tempMax)}°C`}
+      >
+        ↓{Math.round(day.tempMin)}° ↑{Math.round(day.tempMax)}°
       </div>
     </div>
   );
