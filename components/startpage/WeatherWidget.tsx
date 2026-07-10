@@ -273,7 +273,7 @@ export default function WeatherWidget() {
             className="mt-0.5 text-[11px] tabular-nums text-paradise-200/80"
             title={`Min ${Math.round(weather.tempMin)}°C, Max ${Math.round(weather.tempMax)}°C`}
           >
-            ↓{Math.round(weather.tempMin)}° ↑{Math.round(weather.tempMax)}°
+            ↓{Math.round(weather.tempMin)}°C ↑{Math.round(weather.tempMax)}°C
           </div>
         </>
       ) : (
@@ -291,19 +291,19 @@ function ForecastRow({ day }: { day: ForecastDay }) {
   const forecastWeather = weatherCodeToPresentation(day.weatherCode);
 
   return (
-    <div className="grid grid-cols-[44px_1fr_70px] items-center text-xs">
+    <div className="grid grid-cols-[44px_1fr_78px] items-center text-xs">
       <div className="text-paradise-200/90">{formatWeekday(day.date)}</div>
-      <div className="flex items-center gap-2 text-paradise-100/90">
+      <div className="flex min-w-0 items-center gap-2 text-paradise-100/90">
         <forecastWeather.Icon
           className={`shrink-0 text-sm ${forecastWeather.accentClassName}`}
         />
-        <span>{forecastWeather.label}</span>
+        <span className="truncate">{forecastWeather.label}</span>
       </div>
       <div
         className="text-right tabular-nums text-paradise-200/80"
         title={`Min ${Math.round(day.tempMin)}°C, Max ${Math.round(day.tempMax)}°C`}
       >
-        ↓{Math.round(day.tempMin)}° ↑{Math.round(day.tempMax)}°
+        ↓{Math.round(day.tempMin)}°C ↑{Math.round(day.tempMax)}°C
       </div>
     </div>
   );
