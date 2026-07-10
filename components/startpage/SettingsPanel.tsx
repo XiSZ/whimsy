@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaCog } from "react-icons/fa";
 import { useAppSettings } from "./settings";
 
 export default function SettingsPanel() {
   const [open, setOpen] = useState(false);
   const [settings, update] = useAppSettings();
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   return (
-    <div className="fixed bottom-4 left-4 z-20">
+    <div ref={rootRef} className="fixed bottom-4 left-4 z-20">
       {open && (
         <div className="mb-2 w-60 rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150">
           <div className="text-[11px] uppercase tracking-wide text-paradise-200/75">
