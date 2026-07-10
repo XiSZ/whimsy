@@ -44,3 +44,5 @@
 [2026-07-10T20:01:03.675Z] [INFO] Worker consolidate completed in 2ms
 [2026-07-10T20:07:03.736Z] [INFO] Starting worker: audit (1/2 concurrent)
 [2026-07-10T20:07:03.736Z] [INFO] Worker audit completed in 1ms
+[2026-07-10T20:10:03.690Z] [INFO] Starting worker: map (1/2 concurrent)
+[2026-07-10T20:10:03.691Z] [INFO] Worker map completed in 2ms
