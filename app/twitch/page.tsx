@@ -330,51 +330,6 @@ export default function TwitchFollowingPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportJson = () => {
-    downloadFile(
-      JSON.stringify(channels, null, 2),
-      "application/json",
-      "twitch-follows.json",
-    );
-  };
-
-  const handleExportCsv = () => {
-    const header = [
-      "name",
-      "login",
-      "followed_at",
-      "channel_created_at",
-      "type",
-      "last_category",
-      "last_title",
-      "live",
-    ];
-    const rows = channels.map((channel) => [
-      channel.name,
-      channel.login,
-      channel.followedAt,
-      channel.createdAt ?? "",
-      channel.broadcasterType ?? "",
-      channel.lastCategory ?? "",
-      channel.lastTitle ?? "",
-      channel.live ? "yes" : "no",
-    ]);
-    const csv = [header, ...rows]
-      .map((row) =>
-        row
-          .map((value) => {
-            const text = String(value).replaceAll('"', '""');
-            // Leading ' neutralizes Excel formula injection — titles and
-            // names are streamer-controlled input.
-            return `"${/^[=+\-@\t\r]/.test(text) ? `'${text}` : text}"`;
-          })
-          .join(","),
-      )
-      .join("\n");
-
-    downloadFile(csv, "text/csv", "twitch-follows.csv");
-  };
-
   const query = search.trim().toLowerCase();
 
   // Follower totals are one Twitch call per channel, so only fetch them the
@@ -477,6 +432,51 @@ export default function TwitchFollowingPage() {
     }
     return sorted;
   }, [channels, query, sortMode, filterMode, followerCounts]);
+
+  const handleExportJson = () => {
+    downloadFile(
+      JSON.stringify(visibleChannels, null, 2),
+      "application/json",
+      "twitch-follows.json",
+    );
+  };
+
+  const handleExportCsv = () => {
+    const header = [
+      "name",
+      "login",
+      "followed_at",
+      "channel_created_at",
+      "type",
+      "last_category",
+      "last_title",
+      "live",
+    ];
+    const rows = visibleChannels.map((channel) => [
+      channel.name,
+      channel.login,
+      channel.followedAt,
+      channel.createdAt ?? "",
+      channel.broadcasterType ?? "",
+      channel.lastCategory ?? "",
+      channel.lastTitle ?? "",
+      channel.live ? "yes" : "no",
+    ]);
+    const csv = [header, ...rows]
+      .map((row) =>
+        row
+          .map((value) => {
+            const text = String(value).replaceAll('"', '""');
+            // Leading ' neutralizes Excel formula injection — titles and
+            // names are streamer-controlled input.
+            return `"${/^[=+\-@\t\r]/.test(text) ? `'${text}` : text}"`;
+          })
+          .join(","),
+      )
+      .join("\n");
+
+    downloadFile(csv, "text/csv", "twitch-follows.csv");
+  };
 
   const visibleModerated = useMemo(() => {
     const list = moderated ?? [];

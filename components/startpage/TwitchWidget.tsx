@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { FaCog, FaTwitch } from "react-icons/fa";
 
 interface TwitchChannel {
@@ -15,6 +22,7 @@ interface TwitchResponse {
   connected?: boolean;
   channels?: TwitchChannel[];
   username?: string | null;
+  error_code?: string;
 }
 
 const TWITCH_REFRESH_SECONDS = Number(
@@ -191,7 +199,14 @@ export default function TwitchWidget() {
         setConnected(Boolean(payload.connected));
         setChannels(Array.isArray(payload.channels) ? payload.channels : []);
         setUsername(payload.username ?? null);
-        setHasError(false);
+        // A stored session that's actually broken (refresh/API failure) still
+        // comes back 200 with connected:false — don't mistake that for "never
+        // connected"; error_code "no_auth" is the real no-session case.
+        setHasError(
+          payload.connected === false &&
+            Boolean(payload.error_code) &&
+            payload.error_code !== "no_auth",
+        );
       } catch {
         if (cancelled) return;
         setHasError(true);
@@ -207,13 +222,29 @@ export default function TwitchWidget() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [refreshMs, maxChannels]);
+  }, [refreshMs]);
 
   const visibleChannels = showAllChannels
     ? channels
     : channels.slice(0, clamp(maxChannels, 1, MAX_CHANNELS_CAP));
 
   const canExpand = channels.length > clamp(maxChannels, 1, MAX_CHANNELS_CAP);
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+
+  const updateFade = useCallback(() => {
+    const el = listRef.current;
+    setHasMoreBelow(
+      el ? el.scrollHeight - el.scrollTop - el.clientHeight > 1 : false,
+    );
+  }, []);
+
+  useEffect(() => {
+    updateFade();
+    window.addEventListener("resize", updateFade);
+    return () => window.removeEventListener("resize", updateFade);
+  }, [visibleChannels, updateFade]);
 
   const handleRefreshSecondsChange = (
     event: ChangeEvent<HTMLSelectElement>,
@@ -323,6 +354,25 @@ export default function TwitchWidget() {
         <div className="mt-2 text-xs text-paradise-200/75">
           Set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` to enable login.
         </div>
+      ) : hasError ? (
+        <div className="mt-2 grid gap-2">
+          <div className="text-xs text-paradise-200/75">
+            Could not load Twitch right now.
+          </div>
+          <button
+            onClick={handleConnect}
+            className="rounded-md border border-[#7d66d8]/70 bg-[#7d66d8]/20 px-2 py-1 text-xs font-medium text-[#d8cfff] transition-colors hover:bg-[#7d66d8]/30"
+          >
+            Reconnect
+          </button>
+          <button
+            onClick={handleDisconnect}
+            disabled={isDisconnecting}
+            className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/80 transition-colors hover:bg-black/30 disabled:opacity-60"
+          >
+            {isDisconnecting ? "Resetting..." : "Reset Twitch session"}
+          </button>
+        </div>
       ) : !connected ? (
         <div className="mt-2 grid gap-2">
           <div className="text-xs text-paradise-200/75">
@@ -336,25 +386,6 @@ export default function TwitchWidget() {
             className="rounded-md border border-[#7d66d8]/70 bg-[#7d66d8]/20 px-2 py-1 text-xs font-medium text-[#d8cfff] transition-colors hover:bg-[#7d66d8]/30"
           >
             Connect Twitch
-          </button>
-          <button
-            onClick={handleDisconnect}
-            disabled={isDisconnecting}
-            className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/80 transition-colors hover:bg-black/30 disabled:opacity-60"
-          >
-            {isDisconnecting ? "Resetting..." : "Reset Twitch session"}
-          </button>
-        </div>
-      ) : hasError ? (
-        <div className="mt-2 grid gap-2">
-          <div className="text-xs text-paradise-200/75">
-            Could not load Twitch right now.
-          </div>
-          <button
-            onClick={handleConnect}
-            className="rounded-md border border-[#7d66d8]/70 bg-[#7d66d8]/20 px-2 py-1 text-xs font-medium text-[#d8cfff] transition-colors hover:bg-[#7d66d8]/30"
-          >
-            Reconnect
           </button>
           <button
             onClick={handleDisconnect}
@@ -384,7 +415,11 @@ export default function TwitchWidget() {
       ) : (
         <div className="mt-2 grid gap-2">
           <div className="relative">
-            <div className="twitch-scroll grid max-h-[calc(100dvh-330px)] gap-1 overflow-y-auto">
+            <div
+              ref={listRef}
+              onScroll={updateFade}
+              className="twitch-scroll grid max-h-[calc(100dvh-330px)] gap-1 overflow-y-auto"
+            >
               {visibleChannels.map((channel) => (
                 <a
                   key={channel.login}
@@ -407,7 +442,7 @@ export default function TwitchWidget() {
                 </a>
               ))}
             </div>
-            {visibleChannels.length > 6 && (
+            {hasMoreBelow && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 rounded-b bg-gradient-to-t from-[#161616]/80 to-transparent" />
             )}
           </div>
