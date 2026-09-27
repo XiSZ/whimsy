@@ -132,7 +132,7 @@ export default function ProgressBars() {
             <span className="text-xs text-paradise-200">{item.label}</span>
             <div className="h-1.5 rounded-full bg-black/25 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-[#ffd38d] via-[#ff9b3f] to-[#ff7a18] transition-[width] duration-500"
+                className="h-full rounded-full accent-bar transition-[width] duration-500"
                 style={{ width: `${item.value.toFixed(1)}%` }}
               />
             </div>

@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { FaCog } from "react-icons/fa";
 import { useAppSettings } from "./settings";
 
+// Shown in the picker while no custom accent is set (the progress-bar orange).
+const DEFAULT_ACCENT = "#ff9b3f";
+
 export default function SettingsPanel() {
   const [open, setOpen] = useState(false);
   const [settings, update] = useAppSettings();
@@ -36,6 +39,30 @@ export default function SettingsPanel() {
               className="accent-paradise-300"
             />
           </label>
+          <div className="mt-2 flex items-center justify-between gap-2 text-sm text-paradise-100/85">
+            <label htmlFor="accent-color" className="cursor-pointer">
+              Accent color
+            </label>
+            <div className="flex items-center gap-2">
+              {settings.accentColor && (
+                <button
+                  onClick={() => update({ accentColor: null })}
+                  className="text-[11px] text-paradise-200/60 transition-colors hover:text-paradise-200 cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+              <input
+                id="accent-color"
+                type="color"
+                value={settings.accentColor ?? DEFAULT_ACCENT}
+                onChange={(event) =>
+                  update({ accentColor: event.target.value })
+                }
+                className="h-6 w-8 cursor-pointer rounded border border-[#2d2d2d]/70 bg-transparent"
+              />
+            </div>
+          </div>
         </div>
       )}
 

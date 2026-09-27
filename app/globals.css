@@ -15,6 +15,9 @@
   --color-paradise-800: #2a3a48;
   --color-paradise-900: #1e2a35;
 
+  /* Soft accent for the greeting name and clock; follows the user accent */
+  --color-highlight: #ffe4bf;
+
   /* Other colors */
   --color-paradise-fg: #fff0d8;
   --color-paradise-bg: #0a0c16;
@@ -29,6 +32,27 @@
 /* --- Base --- */
 html {
   @apply bg-paradise-bg text-paradise-fg -z-50;
+}
+
+/* --- User accent --- */
+/* A custom accent (Settings → Accent color) is set as `--accent` plus a
+   `data-accent` attribute on <html>; without it the default palette applies. */
+.accent-bar {
+  background-image: linear-gradient(to right, #ffd38d, #ff9b3f, #ff7a18);
+}
+
+:root[data-accent] {
+  --color-paradise-300: var(--accent);
+  --color-highlight: color-mix(in oklab, var(--accent), white 35%);
+}
+
+:root[data-accent] .accent-bar {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--accent), white 45%),
+    var(--accent),
+    color-mix(in oklab, var(--accent), black 15%)
+  );
 }
 
 /* --- Keyframes --- */

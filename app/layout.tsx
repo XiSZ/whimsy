@@ -38,7 +38,16 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${mono.variable} ${figtree.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Apply the saved accent color before first paint (see settings.ts). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var c=JSON.parse(localStorage.getItem("whimsy-settings")||"{}").accentColor;if(c){var r=document.documentElement;r.style.setProperty("--accent",c);r.dataset.accent=""}}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         <div className="text-paradise-fg min-h-screen overflow-x-hidden flex items-center justify-center">
           <div className="fixed left-0 top-0 w-screen h-screen bg-paradise-bg -z-30" />

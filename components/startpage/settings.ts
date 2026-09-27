@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 
 export interface AppSettings {
   openInNewTab: boolean;
+  // Hex color overriding the default accent; null keeps the built-in palette.
+  accentColor: string | null;
 }
 
 const SETTINGS_KEY = "whimsy-settings";
 const SETTINGS_EVENT = "whimsy-settings-changed";
-const DEFAULTS: AppSettings = { openInNewTab: false };
+const DEFAULTS: AppSettings = { openInNewTab: false, accentColor: null };
 
 function readSettings(): AppSettings {
   try {
@@ -20,6 +22,19 @@ function readSettings(): AppSettings {
     };
   } catch {
     return DEFAULTS;
+  }
+}
+
+// Applies the accent to <html>; mirrored by the inline script in the root
+// layout, which does the same before first paint to avoid a color flash.
+export function applyAccentColor(color: string | null) {
+  const root = document.documentElement;
+  if (color) {
+    root.style.setProperty("--accent", color);
+    root.dataset.accent = "";
+  } else {
+    root.style.removeProperty("--accent");
+    delete root.dataset.accent;
   }
 }
 
@@ -47,6 +62,7 @@ export function useAppSettings(): [
     } catch {
       // Storage unavailable — the change won't persist.
     }
+    if (patch.accentColor !== undefined) applyAccentColor(patch.accentColor);
     window.dispatchEvent(new Event(SETTINGS_EVENT));
   };
 
