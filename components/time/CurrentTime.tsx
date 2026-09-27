@@ -51,9 +51,13 @@ export default function CurrentTime({
   displayMs,
   msPrecision,
 }: CurrentTimeProps) {
-  const [time, setTime] = useState(getTimeParts());
+  // Starts empty so the prerendered HTML (build-time clock) can't mismatch the
+  // client; a hydration mismatch makes React re-render the whole document,
+  // which also wipes the accent attributes set on <html> before paint.
+  const [time, setTime] = useState<TimeParts | null>(null);
 
   useEffect(() => {
+    setTime(getTimeParts());
     const interval = setInterval(() => {
       setTime(getTimeParts());
     }, 1000);
@@ -71,43 +75,50 @@ export default function CurrentTime({
       <span className="opacity-0 animate-[fadeIn_0.5s_ease-out_0.1s_forwards]">
         It’s currently:
       </span>
-      <div className="flex gap-1 opacity-0 animate-[fadeIn_0.5s_ease-out_0.25s_forwards]">
-        <AnimatedCounter
-          value={time.hours}
-          className="font-mono text-highlight"
-          decimalPrecision={0}
-          padNumber={2}
-          showColorsWhenValueChanges={false}
-        />
-        :
-        <AnimatedCounter
-          value={time.minutes}
-          className="font-mono text-highlight"
-          decimalPrecision={0}
-          padNumber={2}
-          showColorsWhenValueChanges={false}
-        />
-        :
-        <AnimatedCounter
-          value={time.seconds}
-          className="font-mono text-highlight"
-          decimalPrecision={0}
-          padNumber={2}
-          showColorsWhenValueChanges={false}
-        />
-        {displayMs && (
-          <>
-            .
-            <AnimatedCounter
-              value={time.milliseconds}
-              className="font-mono text-highlight"
-              decimalPrecision={msPrecision}
-              padNumber={3}
-              showColorsWhenValueChanges={false}
-            />
-          </>
-        )}
-      </div>
+      {time ? (
+        <div className="flex gap-1 opacity-0 animate-[fadeIn_0.5s_ease-out_0.25s_forwards]">
+          <AnimatedCounter
+            value={time.hours}
+            className="font-mono text-highlight"
+            decimalPrecision={0}
+            padNumber={2}
+            showColorsWhenValueChanges={false}
+          />
+          :
+          <AnimatedCounter
+            value={time.minutes}
+            className="font-mono text-highlight"
+            decimalPrecision={0}
+            padNumber={2}
+            showColorsWhenValueChanges={false}
+          />
+          :
+          <AnimatedCounter
+            value={time.seconds}
+            className="font-mono text-highlight"
+            decimalPrecision={0}
+            padNumber={2}
+            showColorsWhenValueChanges={false}
+          />
+          {displayMs && (
+            <>
+              .
+              <AnimatedCounter
+                value={time.milliseconds}
+                className="font-mono text-highlight"
+                decimalPrecision={msPrecision}
+                padNumber={3}
+                showColorsWhenValueChanges={false}
+              />
+            </>
+          )}
+        </div>
+      ) : (
+        // Same footprint as the clock so nothing shifts when it appears.
+        <span className="invisible font-mono" aria-hidden>
+          {displayMs ? "00 : 00 : 00 . 000" : "00 : 00 : 00"}
+        </span>
+      )}
     </div>
   );
 }

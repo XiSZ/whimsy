@@ -175,10 +175,13 @@ export default function SearchBar() {
   const [currentEngine, setCurrentEngine] = useState<EngineKey>("google");
   const [settings] = useAppSettings();
   const [value, setValue] = useState("");
-  const [placeholder, setPlaceholder] = useState(() => randomPlaceholder("google"));
+  // Deterministic first render (a random pick would differ between the
+  // prerendered HTML and hydration); the effect below randomizes it.
+  const [placeholder, setPlaceholder] = useState(placeholders.google[0]);
 
   // Restore last-used engine; runs before the save effect below.
   useEffect(() => {
+    let engineKey: EngineKey = "google";
     try {
       const stored = JSON.parse(
         localStorage.getItem(SEARCH_PREFS_KEY) ?? "{}",
@@ -186,11 +189,12 @@ export default function SearchBar() {
       const engine = engines.find((eng) => eng.key === stored.engine);
       if (engine) {
         setCurrentEngine(engine.key);
-        setPlaceholder(randomPlaceholder(engine.key));
+        engineKey = engine.key;
       }
     } catch {
       // Corrupt prefs — defaults win.
     }
+    setPlaceholder(randomPlaceholder(engineKey));
   }, []);
 
   useEffect(() => {

@@ -39,15 +39,19 @@ export function applyAccentColor(color: string | null) {
 }
 
 // localStorage-backed settings shared across components; a window event
-// keeps every subscriber in sync within the same tab.
+// keeps every subscriber in sync within the same tab. `loaded` turns true once
+// the stored values have been read (the first render always sees DEFAULTS).
 export function useAppSettings(): [
   AppSettings,
   (patch: Partial<AppSettings>) => void,
+  boolean,
 ] {
   const [settings, setSettings] = useState<AppSettings>(DEFAULTS);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setSettings(readSettings());
+    setLoaded(true);
     const sync = () => setSettings(readSettings());
     window.addEventListener(SETTINGS_EVENT, sync);
     return () => window.removeEventListener(SETTINGS_EVENT, sync);
@@ -66,5 +70,5 @@ export function useAppSettings(): [
     window.dispatchEvent(new Event(SETTINGS_EVENT));
   };
 
-  return [settings, update];
+  return [settings, update, loaded];
 }

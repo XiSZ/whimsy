@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Figtree } from "next/font/google";
 import { Suspense } from "react";
 import GrainientLoader from "@/components/background/useGrainient";
+import AccentSync from "@/components/startpage/AccentSync";
 
 export const metadata: Metadata = {
   title: "xisz.dev",
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body>
         <div className="text-paradise-fg min-h-screen overflow-x-hidden flex items-center justify-center">
           <div className="fixed left-0 top-0 w-screen h-screen bg-paradise-bg -z-30" />
+          <AccentSync />
           <Suspense>
             <GrainientLoader />
           </Suspense>

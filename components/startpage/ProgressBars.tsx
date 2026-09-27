@@ -106,10 +106,14 @@ function calculateProgress(date: Date): ProgressItem[] {
   ];
 }
 
+const EMPTY_ITEMS: ProgressItem[] = ["Year", "Quarter", "Month", "Workday"].map(
+  (label) => ({ label, value: 0 }),
+);
+
 export default function ProgressBars() {
-  const [items, setItems] = useState<ProgressItem[]>(() =>
-    calculateProgress(getDateInTimeZone(APP_TIME_ZONE)),
-  );
+  // Empty bars on the first render: computing progress here would bake the
+  // build-time values into the prerendered HTML and mismatch on hydration.
+  const [items, setItems] = useState<ProgressItem[] | null>(null);
 
   useEffect(() => {
     const update = () => {
@@ -124,7 +128,7 @@ export default function ProgressBars() {
   return (
     <div className="w-full max-w-xl rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="grid gap-1.5">
-        {items.map((item) => (
+        {(items ?? EMPTY_ITEMS).map((item) => (
           <div
             key={item.label}
             className="grid grid-cols-[62px_1fr_42px] items-center gap-2"
@@ -137,7 +141,7 @@ export default function ProgressBars() {
               />
             </div>
             <span className="text-xs tabular-nums text-paradise-200/90 text-right">
-              {Math.round(item.value)}%
+              {items && `${Math.round(item.value)}%`}
             </span>
           </div>
         ))}
