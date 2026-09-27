@@ -3,7 +3,6 @@
 import React, {
   memo,
   useEffect,
-  useCallback,
   useRef,
   useState,
   CSSProperties,
@@ -63,17 +62,6 @@ const NumberColumn = memo(
     const previousDigit = usePrevious(+currentDigit);
     const columnContainer = useRef<HTMLDivElement>(null);
 
-    const setColumnToNumber = useCallback(
-      (number: string) => {
-        if (columnContainer.current) {
-          setPosition(
-            columnContainer.current.clientHeight * parseInt(number, 10),
-          );
-        }
-      },
-      [columnContainer.current?.clientHeight],
-    );
-
     useEffect(() => {
       setAnimationClass(previousDigit !== currentDigit ? delta : "");
       if (!showColorsWhenValueChanges) return;
@@ -82,19 +70,21 @@ const NumberColumn = memo(
       } else if (delta === "animate-moveDown") {
         setMovementType("decrement");
       }
-    }, [digit, delta, previousDigit, currentDigit]);
+    }, [digit, delta, previousDigit, currentDigit, showColorsWhenValueChanges]);
 
-    // reset movementType after 300ms
+    // reset movementType after 200ms
     useEffect(() => {
-      if (movementType !== null)
-        setTimeout(() => {
-          setMovementType(null);
-        }, 200);
-    }, [movementType !== null, movementType]);
+      if (movementType === null) return;
+      const timeout = setTimeout(() => setMovementType(null), 200);
+      return () => clearTimeout(timeout);
+    }, [movementType]);
 
+    // Effects run after the ref is attached, so the row height is measurable.
     useEffect(() => {
-      setColumnToNumber(digit);
-    }, [digit, setColumnToNumber]);
+      if (columnContainer.current) {
+        setPosition(columnContainer.current.clientHeight * parseInt(digit, 10));
+      }
+    }, [digit]);
 
     if (digit === "-") {
       return <span>{digit}</span>;
