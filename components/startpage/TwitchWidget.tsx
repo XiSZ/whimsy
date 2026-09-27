@@ -6,9 +6,9 @@ import {
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
 } from "react";
 import { FaCog, FaTwitch } from "react-icons/fa";
+import Select from "@/components/ui/Select";
 
 interface TwitchChannel {
   login: string;
@@ -36,7 +36,13 @@ const TWITCH_FETCH_LIMIT = 100;
 // The list is viewport-height-capped with its own scrollbar, so a high
 // channel count can never collide with the fixed settings button below.
 const MAX_CHANNELS_CAP = 25;
-const MAX_CHANNELS_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25];
+const MAX_CHANNELS_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25].map(
+  (count) => ({ value: count, label: String(count) }),
+);
+const REFRESH_OPTIONS = [30, 60, 90, 120, 180, 300, 600].map((seconds) => ({
+  value: seconds,
+  label: `${seconds}s`,
+}));
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -246,18 +252,16 @@ export default function TwitchWidget() {
     return () => window.removeEventListener("resize", updateFade);
   }, [visibleChannels, updateFade]);
 
-  const handleRefreshSecondsChange = (
-    event: ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const value = clamp(Number(event.target.value), 30, 600);
+  const handleRefreshSecondsChange = (seconds: number) => {
+    const value = clamp(seconds, 30, 600);
     setRefreshSeconds(value);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(TWITCH_REFRESH_KEY, String(value));
     }
   };
 
-  const handleMaxChannelsChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const value = clamp(Number(event.target.value), 1, MAX_CHANNELS_CAP);
+  const handleMaxChannelsChange = (count: number) => {
+    const value = clamp(count, 1, MAX_CHANNELS_CAP);
     setMaxChannels(value);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(TWITCH_MAX_CHANNELS_KEY, String(value));
@@ -312,34 +316,26 @@ export default function TwitchWidget() {
           <label className="self-center text-[11px] text-paradise-200/80">
             Refresh
           </label>
-          <select
+          <Select
+            size="sm"
+            aria-label="Refresh interval"
             value={refreshSeconds}
+            options={REFRESH_OPTIONS}
             onChange={handleRefreshSecondsChange}
-            className="rounded border border-[#2d2d2d]/80 bg-black/25 px-1 py-0.5 text-[11px] text-paradise-100"
-          >
-            <option value={30}>30s</option>
-            <option value={60}>60s</option>
-            <option value={90}>90s</option>
-            <option value={120}>120s</option>
-            <option value={180}>180s</option>
-            <option value={300}>300s</option>
-            <option value={600}>600s</option>
-          </select>
+            className="w-16"
+          />
 
           <label className="self-center text-[11px] text-paradise-200/80">
             Channels
           </label>
-          <select
+          <Select
+            size="sm"
+            aria-label="Channels shown"
             value={maxChannels}
+            options={MAX_CHANNELS_OPTIONS}
             onChange={handleMaxChannelsChange}
-            className="rounded border border-[#2d2d2d]/80 bg-black/25 px-1 py-0.5 text-[11px] text-paradise-100"
-          >
-            {MAX_CHANNELS_OPTIONS.map((count) => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </select>
+            className="w-16"
+          />
 
           <a
             href="/twitch"

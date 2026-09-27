@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaArrowLeft, FaExternalLinkAlt, FaTwitch } from "react-icons/fa";
+import Select, { type SelectOption } from "@/components/ui/Select";
 
 interface FollowedChannel {
   id: string;
@@ -63,6 +64,22 @@ const VIEWS = ["following", "moderating", "blocked"] as const;
 type SortMode = (typeof SORT_MODES)[number];
 type FilterMode = (typeof FILTER_MODES)[number];
 type View = (typeof VIEWS)[number];
+
+const FILTER_OPTIONS: SelectOption<FilterMode>[] = [
+  { value: "all", label: "All" },
+  { value: "live", label: "Live now" },
+  { value: "partner", label: "Partners" },
+  { value: "affiliate", label: "Affiliates" },
+];
+const SORT_OPTIONS: SelectOption<SortMode>[] = [
+  { value: "recent", label: "Newest follows" },
+  { value: "oldest", label: "Oldest follows" },
+  { value: "name", label: "Name A–Z" },
+  { value: "channel-new", label: "Newest channels" },
+  { value: "channel-old", label: "Oldest channels" },
+  { value: "followers", label: "Most followed" },
+  { value: "viewers", label: "Most viewers (live)" },
+];
 
 const PREFS_KEY = "twitch-dashboard-prefs";
 const FOLLOWER_CACHE_KEY = "twitch-follower-counts";
@@ -501,9 +518,6 @@ export default function TwitchFollowingPage() {
         : "border-[#2d2d2d]/80 bg-black/20 text-paradise-200/70 hover:bg-black/30 hover:text-paradise-200"
     }`;
 
-  const controlClass =
-    "rounded-md border border-[#2d2d2d]/80 bg-black/25 px-2 py-1 text-xs text-paradise-100";
-
   const reconnectHint = (permission: string) => (
     <div className="grid gap-2">
       <div className="text-xs text-paradise-200/75">
@@ -600,33 +614,20 @@ export default function TwitchFollowingPage() {
               />
               {view === "following" ? (
                 <>
-                  <select
+                  <Select
+                    aria-label="Filter channels"
                     value={filterMode}
-                    onChange={(event) =>
-                      setFilterMode(event.target.value as FilterMode)
-                    }
-                    className={controlClass}
-                  >
-                    <option value="all">All</option>
-                    <option value="live">Live now</option>
-                    <option value="partner">Partners</option>
-                    <option value="affiliate">Affiliates</option>
-                  </select>
-                  <select
+                    options={FILTER_OPTIONS}
+                    onChange={setFilterMode}
+                    className="sm:w-28 sm:shrink-0"
+                  />
+                  <Select
+                    aria-label="Sort channels"
                     value={sortMode}
-                    onChange={(event) =>
-                      setSortMode(event.target.value as SortMode)
-                    }
-                    className={controlClass}
-                  >
-                    <option value="recent">Newest follows</option>
-                    <option value="oldest">Oldest follows</option>
-                    <option value="name">Name A–Z</option>
-                    <option value="channel-new">Newest channels</option>
-                    <option value="channel-old">Oldest channels</option>
-                    <option value="followers">Most followed</option>
-                    <option value="viewers">Most viewers (live)</option>
-                  </select>
+                    options={SORT_OPTIONS}
+                    onChange={setSortMode}
+                    className="sm:w-44 sm:shrink-0"
+                  />
                   <button
                     onClick={handleExportCsv}
                     title="Download the full list as CSV"
