@@ -31,7 +31,7 @@ const categories: BookmarkCategory[] = [
   {
     title: "Utils",
     links: [
-      { label: "Vanish", url: "https://www.vanish.so/" },
+      { label: "Vanish", url: "https://hy.gl/" },
       { label: "Cobalt", url: "https://cobalt.tools" },
       { label: "Send", url: "https://send.vis.ee/" },
     ],
