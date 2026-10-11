@@ -31,31 +31,42 @@ const categories: BookmarkCategory[] = [
     ],
   },
   {
-    title: "Utils",
+    title: "Utils I",
     links: [
       { label: "iLovePDF", url: "https://www.ilovepdf.com/" },
       { label: "TinyWOW", url: "https://tinywow.com/" },
       { label: "Ninite", url: "https://ninite.com/" },
       { label: "MemRadar", url: "https://memradar.com/" },
+    ],
+  },
+  {
+    title: "Utils II",
+    links: [
       { label: "Vanish", url: "https://hy.gl/" },
       { label: "Cobalt", url: "https://cobalt.tools" },
       { label: "Send", url: "https://send.vis.ee/" },
     ],
   },
+
   {
-    title: "Prices",
+    title: "Prices I",
     links: [
       { label: "Amazon", url: "https://www.amazon.de/" },
       { label: "idealo", url: "https://www.idealo.de/" },
       { label: "Geizhals", url: "https://geizhals.de/" },
       { label: "mydealz", url: "https://www.mydealz.de/" },
+    ],
+  },
+
+  {
+    title: "Prices II",
+    links: [
       { label: "Camelcamelcamel", url: "https://de.camelcamelcamel.com/" },
       { label: "Keepa", url: "https://keepa.com/#!" },
       { label: "Slickdeals", url: "https://slickdeals.net/" },
     ],
   },
-  
-  
+
   {
     title: "Builds I",
     links: [
@@ -73,7 +84,7 @@ const categories: BookmarkCategory[] = [
       },
     ],
   },
-  
+
   {
     title: "Builds II",
     links: [
@@ -82,8 +93,8 @@ const categories: BookmarkCategory[] = [
       { label: "PCCombo", url: "https://www.pc-kombo.com/us/" },
       { label: "PCBuilds", url: "https://pc-builds.com/" },
       { label: "PCBuilder", url: "https://pcbuilder.net/" },
-      ]
-    },
+    ],
+  },
 ];
 
 const STAGGER_MS = 60;
