@@ -57,7 +57,7 @@ const categories: BookmarkCategory[] = [
     links: [
       { label: "PCPartPicker", url: "https://de.pcpartpicker.com/" },
       { label: "UserBenchmark", url: "https://www.userbenchmark.com/" },
-      { label: "TechPowerUp", url: "https://www.techpowerup.com/" },
+      { label: "ComputerBase", url: "https://www.computerbase.de/" },
     ],
   },
   {
