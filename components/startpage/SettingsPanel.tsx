@@ -2,10 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FaCog } from "react-icons/fa";
-import { useAppSettings } from "./settings";
+import clsx from "clsx";
+import { useAppSettings, type BookmarkLayout } from "./settings";
 
 // Shown in the picker while no custom accent is set (the progress-bar orange).
 const DEFAULT_ACCENT = "#ff9b3f";
+
+const LAYOUT_OPTIONS: { value: BookmarkLayout; label: string }[] = [
+  { value: "tiles", label: "Tiles" },
+  { value: "strips", label: "Strips" },
+];
 
 export default function SettingsPanel() {
   const [open, setOpen] = useState(false);
@@ -61,6 +67,31 @@ export default function SettingsPanel() {
                 }
                 className="h-6 w-8 cursor-pointer rounded border border-[#2d2d2d]/70 bg-transparent"
               />
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2 text-sm text-paradise-100/85">
+            Bookmarks
+            <div
+              role="radiogroup"
+              aria-label="Bookmark layout"
+              className="flex rounded-md border border-[#2d2d2d]/70 p-0.5 text-[11px]"
+            >
+              {LAYOUT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  role="radio"
+                  aria-checked={settings.bookmarkLayout === option.value}
+                  onClick={() => update({ bookmarkLayout: option.value })}
+                  className={clsx(
+                    "rounded px-2 py-0.5 transition-colors cursor-pointer",
+                    settings.bookmarkLayout === option.value
+                      ? "bg-paradise-300/20 text-paradise-200"
+                      : "text-paradise-200/60 hover:text-paradise-200",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

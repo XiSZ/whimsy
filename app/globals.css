@@ -55,6 +55,11 @@ html {
   );
 }
 
+/* --- Bookmark layout --- */
+/* Settings → Bookmarks sets `data-bookmarks` on <html>; `strips:` styles
+   apply in the strip layout, everything else is the tile default. */
+@custom-variant strips (&:where([data-bookmarks="strips"] *));
+
 /* --- Keyframes --- */
 @keyframes fadeIn {
   from {

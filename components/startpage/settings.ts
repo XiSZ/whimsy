@@ -2,15 +2,22 @@
 
 import { useEffect, useState } from "react";
 
+export type BookmarkLayout = "tiles" | "strips";
+
 export interface AppSettings {
   openInNewTab: boolean;
   // Hex color overriding the default accent; null keeps the built-in palette.
   accentColor: string | null;
+  bookmarkLayout: BookmarkLayout;
 }
 
 const SETTINGS_KEY = "whimsy-settings";
 const SETTINGS_EVENT = "whimsy-settings-changed";
-const DEFAULTS: AppSettings = { openInNewTab: false, accentColor: null };
+const DEFAULTS: AppSettings = {
+  openInNewTab: false,
+  accentColor: null,
+  bookmarkLayout: "tiles",
+};
 
 function readSettings(): AppSettings {
   try {
@@ -36,6 +43,13 @@ export function applyAccentColor(color: string | null) {
     root.style.removeProperty("--accent");
     delete root.dataset.accent;
   }
+}
+
+// Sets `data-bookmarks` on <html>; the bookmarks switch layouts purely via CSS
+// so the stored choice applies before hydration (mirrored by the same inline
+// script as the accent).
+export function applyBookmarkLayout(layout: BookmarkLayout) {
+  document.documentElement.dataset.bookmarks = layout;
 }
 
 // localStorage-backed settings shared across components; a window event
@@ -67,6 +81,7 @@ export function useAppSettings(): [
       // Storage unavailable — the change won't persist.
     }
     if (patch.accentColor !== undefined) applyAccentColor(patch.accentColor);
+    if (patch.bookmarkLayout) applyBookmarkLayout(patch.bookmarkLayout);
     window.dispatchEvent(new Event(SETTINGS_EVENT));
   };
 

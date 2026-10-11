@@ -42,10 +42,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Apply the saved accent color before first paint (see settings.ts). */}
+        {/* Apply the saved accent color and bookmark layout before first
+            paint (see settings.ts). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var c=JSON.parse(localStorage.getItem("whimsy-settings")||"{}").accentColor;if(c){var r=document.documentElement;r.style.setProperty("--accent",c);r.dataset.accent=""}}catch(e){}`,
+            __html: `try{var s=JSON.parse(localStorage.getItem("whimsy-settings")||"{}"),r=document.documentElement,c=s.accentColor;if(c){r.style.setProperty("--accent",c);r.dataset.accent=""}if(s.bookmarkLayout)r.dataset.bookmarks=s.bookmarkLayout}catch(e){}`,
           }}
         />
       </head>
