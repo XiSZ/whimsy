@@ -30,6 +30,13 @@ const engines = [
     url: "https://duckduckgo.com/?q=",
   },
   {
+    key: "twitch",
+    label: "Twitch",
+    bang: "tw",
+    icon: SiTwitch,
+    url: "https://www.twitch.tv/search?term=",
+  },
+  {
     key: "youtube",
     label: "YouTube",
     bang: "yt",
@@ -43,12 +50,19 @@ const engines = [
     icon: FaGithub,
     url: "https://github.com/search?q=",
   },
-  {
-    key: "twitch",
-    label: "Twitch",
-    bang: "tw",
-    icon: SiTwitch,
-    url: "https://www.twitch.tv/search?term=",
+    {
+    key: "claude",
+    label: "Claude",
+    bang: "c",
+    icon: SiAnthropic,
+    url: "https://claude.ai/new?q=",
+  },
+    {
+    key: "gemini",
+    label: "Gemini",
+    bang: "gem",
+    icon: SiGooglegemini,
+    url: "https://gemini.google.com/app?hl=en&input=",
   },
   {
     key: "perplexity",
@@ -56,20 +70,6 @@ const engines = [
     bang: "p",
     icon: SiPerplexity,
     url: "https://www.perplexity.ai/search?q=",
-  },
-  {
-    key: "claude",
-    label: "Claude",
-    bang: "c",
-    icon: SiAnthropic,
-    url: "https://claude.ai/new?q=",
-  },
-  {
-    key: "gemini",
-    label: "Gemini",
-    bang: "gem",
-    icon: SiGooglegemini,
-    url: "https://gemini.google.com/app?hl=en&input=",
   },
 ] as const;
 

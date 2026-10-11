@@ -18,6 +18,8 @@ const categories: BookmarkCategory[] = [
       { label: "Twitch", url: "https://Twitch.tv/" },
       { label: "YouTube", url: "https://youtube.com/" },
       { label: "GitHub", url: "https://github.com/" },
+      { label: "Instagram", url: "https://instagram.com/" },
+      { label: "Twitter", url: "https://x.com/" },
     ],
   },
   {
@@ -31,53 +33,57 @@ const categories: BookmarkCategory[] = [
   {
     title: "Utils",
     links: [
+      { label: "iLovePDF", url: "https://www.ilovepdf.com/" },
+      { label: "TinyWOW", url: "https://tinywow.com/" },
+      { label: "Ninite", url: "https://ninite.com/" },
+      { label: "MemRadar", url: "https://memradar.com/" },
       { label: "Vanish", url: "https://hy.gl/" },
       { label: "Cobalt", url: "https://cobalt.tools" },
       { label: "Send", url: "https://send.vis.ee/" },
     ],
   },
   {
-    title: "AI",
-    links: [
-      { label: "Claude", url: "https://claude.ai/" },
-      { label: "Gemini", url: "https://gemini.google.com/" },
-      { label: "Perplexity", url: "https://www.perplexity.ai/" },
-    ],
-  },
-  {
-    title: "Tools",
-    links: [
-      { label: "iLovePDF", url: "https://www.ilovepdf.com/" },
-      { label: "TinyWOW", url: "https://tinywow.com/" },
-      { label: "Ninite", url: "https://ninite.com/" },
-    ],
-  },
-  {
-    title: "Hardware",
-    links: [
-      { label: "PCPartPicker", url: "https://de.pcpartpicker.com/" },
-      { label: "UserBenchmark", url: "https://www.userbenchmark.com/" },
-      { label: "ComputerBase", url: "https://www.computerbase.de/" },
-    ],
-  },
-  {
     title: "Prices",
     links: [
+      { label: "Amazon", url: "https://www.amazon.de/" },
       { label: "idealo", url: "https://www.idealo.de/" },
       { label: "Geizhals", url: "https://geizhals.de/" },
       { label: "mydealz", url: "https://www.mydealz.de/" },
+      { label: "Camelcamelcamel", url: "https://de.camelcamelcamel.com/" },
+      { label: "Keepa", url: "https://keepa.com/#!" },
       { label: "Slickdeals", url: "https://slickdeals.net/" },
     ],
   },
+  
+  
   {
-    title: "Builds",
+    title: "Builds I",
     links: [
-      { label: "Logical Increments", url: "https://www.logicalincrements.com/" },
+      { label: "PCPartPicker", url: "https://de.pcpartpicker.com/" },
+      { label: "UserBenchmark", url: "https://www.userbenchmark.com/" },
+      {
+        label: "Logical Increments",
+        url: "https://www.logicalincrements.com/",
+      },
       { label: "ChooseMyPC", url: "https://choosemypc.net/" },
       { label: "BuildMyPC", url: "https://buildmypc.net/" },
-      { label: "PCBuilder", url: "https://pcbuilder.net/" },
+      {
+        label: "BuildMyPCAI",
+        url: "https://www.buildmypconline.us/pc-builder-and-cost-calculator/",
+      },
     ],
   },
+  
+  {
+    title: "Builds II",
+    links: [
+      { label: "Bottleneck", url: "https://bottleneckcalculator.cc/" },
+      { label: "Pangoly", url: "https://pangoly.com/en/" },
+      { label: "PCCombo", url: "https://www.pc-kombo.com/us/" },
+      { label: "PCBuilds", url: "https://pc-builds.com/" },
+      { label: "PCBuilder", url: "https://pcbuilder.net/" },
+      ]
+    },
 ];
 
 const STAGGER_MS = 60;
