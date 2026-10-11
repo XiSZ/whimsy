@@ -66,6 +66,16 @@ const categories: BookmarkCategory[] = [
       { label: "idealo", url: "https://www.idealo.de/" },
       { label: "Geizhals", url: "https://geizhals.de/" },
       { label: "mydealz", url: "https://www.mydealz.de/" },
+      { label: "Slickdeals", url: "https://slickdeals.net/" },
+    ],
+  },
+  {
+    title: "Builds",
+    links: [
+      { label: "Logical Increments", url: "https://www.logicalincrements.com/" },
+      { label: "ChooseMyPC", url: "https://choosemypc.net/" },
+      { label: "BuildMyPC", url: "https://buildmypc.net/" },
+      { label: "PCBuilder", url: "https://pcbuilder.net/" },
     ],
   },
 ];
@@ -80,7 +90,7 @@ const STAGGER_MS = 60;
 export default function Bookmarks() {
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full strips:hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 auto-rows-fr gap-4 w-full strips:hidden">
         {categories.map((category, i) => (
           <Card
             key={category.title}
