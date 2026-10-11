@@ -13,11 +13,10 @@ interface BookmarkCategory {
 
 const categories: BookmarkCategory[] = [
   {
-    title: "Daily",
+    title: "Social",
     links: [
       { label: "Twitch", url: "https://Twitch.tv/" },
       { label: "YouTube", url: "https://youtube.com/" },
-      { label: "GitHub", url: "https://github.com/" },
       { label: "Instagram", url: "https://instagram.com/" },
       { label: "Twitter", url: "https://x.com/" },
     ],
@@ -31,83 +30,85 @@ const categories: BookmarkCategory[] = [
     ],
   },
   {
-    title: "Utils I",
+    title: "Tools",
     links: [
+      { label: "GitHub", url: "https://github.com/" },
       { label: "iLovePDF", url: "https://www.ilovepdf.com/" },
       { label: "TinyWOW", url: "https://tinywow.com/" },
       { label: "Ninite", url: "https://ninite.com/" },
+    ],
+  },
+  {
+    title: "Share",
+    links: [
+      { label: "Vanish", url: "https://hy.gl/" },
+      { label: "Send", url: "https://send.vis.ee/" },
+      { label: "Cobalt", url: "https://cobalt.tools" },
+    ],
+  },
+  {
+    title: "Shopping",
+    links: [
+      { label: "Amazon", url: "https://www.amazon.de/" },
+      { label: "mydealz", url: "https://www.mydealz.de/" },
+      { label: "Slickdeals", url: "https://slickdeals.net/" },
       { label: "MemRadar", url: "https://memradar.com/" },
     ],
   },
   {
-    title: "Utils II",
+    title: "Prices",
     links: [
-      { label: "Vanish", url: "https://hy.gl/" },
-      { label: "Cobalt", url: "https://cobalt.tools" },
-      { label: "Send", url: "https://send.vis.ee/" },
-    ],
-  },
-
-  {
-    title: "Prices I",
-    links: [
-      { label: "Amazon", url: "https://www.amazon.de/" },
       { label: "idealo", url: "https://www.idealo.de/" },
       { label: "Geizhals", url: "https://geizhals.de/" },
-      { label: "mydealz", url: "https://www.mydealz.de/" },
-    ],
-  },
-
-  {
-    title: "Prices II",
-    links: [
-      { label: "Camelcamelcamel", url: "https://de.camelcamelcamel.com/" },
       { label: "Keepa", url: "https://keepa.com/#!" },
-      { label: "Slickdeals", url: "https://slickdeals.net/" },
+      { label: "Camelcamelcamel", url: "https://de.camelcamelcamel.com/" },
     ],
   },
-
   {
-    title: "Builds I",
+    title: "Builder",
     links: [
       { label: "PCPartPicker", url: "https://de.pcpartpicker.com/" },
-      { label: "UserBenchmark", url: "https://www.userbenchmark.com/" },
+      { label: "PCBuilder", url: "https://pcbuilder.net/" },
+      { label: "BuildMyPC", url: "https://buildmypc.net/" },
+      { label: "PCCombo", url: "https://www.pc-kombo.com/us/" },
+    ],
+  },
+  {
+    title: "Builds",
+    links: [
       {
         label: "Logical Increments",
         url: "https://www.logicalincrements.com/",
       },
       { label: "ChooseMyPC", url: "https://choosemypc.net/" },
-      { label: "BuildMyPC", url: "https://buildmypc.net/" },
+      { label: "PCBuilds", url: "https://pc-builds.com/" },
       {
         label: "BuildMyPCAI",
         url: "https://www.buildmypconline.us/pc-builder-and-cost-calculator/",
       },
     ],
   },
-
   {
-    title: "Builds II",
+    title: "Compare",
     links: [
+      { label: "UserBenchmark", url: "https://www.userbenchmark.com/" },
       { label: "Bottleneck", url: "https://bottleneckcalculator.cc/" },
       { label: "Pangoly", url: "https://pangoly.com/en/" },
-      { label: "PCCombo", url: "https://www.pc-kombo.com/us/" },
-      { label: "PCBuilds", url: "https://pc-builds.com/" },
-      { label: "PCBuilder", url: "https://pcbuilder.net/" },
     ],
   },
 ];
 
 const STAGGER_MS = 60;
 
-// Tiles sit in a fixed grid; an incomplete last row leaves its free cells
-// empty so a new category simply fills the next slot.
+// Tiles sit in a fixed 3-column grid (nine categories of 3–4 links fill it
+// evenly); a partial last row leaves its free cells empty.
 // Both layouts are rendered and the inactive one is hidden via the `strips:`
 // variant (driven by `data-bookmarks` on <html>), so the saved choice shows
 // on first paint without a layout jump after hydration.
 export default function Bookmarks() {
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 auto-rows-fr gap-4 w-full strips:hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 auto-rows-fr gap-4 w-full strips:hidden">
         {categories.map((category, i) => (
           <Card
             key={category.title}
@@ -146,16 +147,18 @@ export default function Bookmarks() {
             className="animate-stagger-in flex-row! items-center gap-4 px-4 py-2.5"
             style={{ animationDelay: `${i * STAGGER_MS}ms` }}
           >
-            <div className="w-20 shrink-0 text-sm text-paradise-300 sm:w-24">
+            <div className="w-20 shrink-0 whitespace-nowrap text-sm text-paradise-300 sm:w-24">
               {category.title}
             </div>
 
-            <div className="flex flex-wrap gap-x-5 gap-y-1">
+            {/* One line per strip; narrow screens scroll it sideways. w-0 keeps
+                the unwrapped links from widening the page itself. */}
+            <div className="flex w-0 flex-1 flex-nowrap gap-x-5 overflow-x-auto [scrollbar-width:none]">
               {category.links.map((link) => (
                 <a
                   key={link.url}
                   href={link.url}
-                  className="text-sm py-0.5 text-paradise-100/85 transition-colors duration-200 hover:text-paradise-200 hover:underline decoration-paradise-300/60 underline-offset-4"
+                  className="shrink-0 whitespace-nowrap text-sm py-0.5 text-paradise-100/85 transition-colors duration-200 hover:text-paradise-200 hover:underline decoration-paradise-300/60 underline-offset-4"
                 >
                   {link.label}
                 </a>
