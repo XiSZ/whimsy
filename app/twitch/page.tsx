@@ -14,6 +14,7 @@ import FollowersView, {
   useFollowerChanges,
 } from "@/components/twitch/FollowersView";
 import ScheduleView from "@/components/twitch/ScheduleView";
+import { useCachedChannelData } from "@/components/twitch/useCachedChannelData";
 import {
   formatCount,
   formatDate,
@@ -80,6 +81,7 @@ const SORT_MODES = [
   "channel-old",
   "followers",
   "viewers",
+  "last-video",
 ] as const;
 const FILTER_MODES = [
   "all",
@@ -89,6 +91,7 @@ const FILTER_MODES = [
   "affiliate",
   "follows-you",
   "no-follow-back",
+  "no-recent-videos",
 ] as const;
 const VIEWS = [
   "following",
@@ -110,6 +113,7 @@ const FILTER_OPTIONS: SelectOption<FilterMode>[] = [
   { value: "affiliate", label: "Affiliates" },
   { value: "follows-you", label: "Follows you" },
   { value: "no-follow-back", label: "Not following back" },
+  { value: "no-recent-videos", label: "No videos in 60 days" },
 ];
 const SORT_OPTIONS: SelectOption<SortMode>[] = [
   { value: "recent", label: "Newest follows" },
@@ -119,10 +123,15 @@ const SORT_OPTIONS: SelectOption<SortMode>[] = [
   { value: "channel-old", label: "Oldest channels" },
   { value: "followers", label: "Most followed" },
   { value: "viewers", label: "Most viewers (live)" },
+  { value: "last-video", label: "Latest video" },
 ];
 
 const PREFS_KEY = "twitch-dashboard-prefs";
 const FAVORITES_KEY = "twitch-favorites";
+const LAST_VIDEO_CACHE_KEY = "twitch-last-videos";
+// "No videos in N days": past broadcasts expire after 7–60 days, so older
+// activity can only show up through highlights or uploads.
+const NO_VIDEO_DAYS = 60;
 const FOLLOWER_CACHE_KEY = "twitch-follower-counts";
 const FOLLOWER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -512,6 +521,26 @@ export default function TwitchFollowingPage() {
   );
   const newFollowerCount = followerChanges.changes?.gained.length ?? 0;
 
+  const channelIdList = useMemo(
+    () => channels.map((channel) => channel.id),
+    [channels],
+  );
+  const usesLastVideos =
+    filterMode === "no-recent-videos" || sortMode === "last-video";
+  // Newest video date per channel (null = none); one Twitch call per channel,
+  // so only loaded once the filter or sort asks for it.
+  const lastVideos = useCachedChannelData<string | null>({
+    enabled: usesLastVideos,
+    ids: channelIdList,
+    endpoint: "/api/twitch/last-videos",
+    field: "lastVideos",
+    cacheKey: LAST_VIDEO_CACHE_KEY,
+    ttlMs: FOLLOWER_CACHE_TTL_MS,
+  });
+  const [noVideoCutoff] = useState(
+    () => Date.now() - NO_VIDEO_DAYS * 24 * 60 * 60 * 1000,
+  );
+
   const visibleChannels = useMemo(() => {
     let filtered = channels;
     if (filterMode === "live") {
@@ -534,6 +563,15 @@ export default function TwitchFollowingPage() {
       filtered = followsMeById
         ? filtered.filter((channel) => !followsMeById.has(channel.id))
         : [];
+    } else if (filterMode === "no-recent-videos") {
+      // Channels not checked yet stay hidden until their chunk lands.
+      filtered = filtered.filter((channel) => {
+        const last = lastVideos.data?.[channel.id];
+        return (
+          last === null ||
+          (typeof last === "string" && Date.parse(last) < noVideoCutoff)
+        );
+      });
     }
     if (query) {
       filtered = filtered.filter((channel) => matchesQuery(channel, query));
@@ -557,6 +595,9 @@ export default function TwitchFollowingPage() {
       sorted.sort(
         (a, b) => (b.viewerCount ?? -1) - (a.viewerCount ?? -1),
       );
+    } else if (sortMode === "last-video") {
+      const lastVideoOf = (id: string) => lastVideos.data?.[id] ?? "";
+      sorted.sort((a, b) => lastVideoOf(b.id).localeCompare(lastVideoOf(a.id)));
     } else {
       sorted.sort((a, b) => b.followedAt.localeCompare(a.followedAt));
     }
@@ -569,6 +610,8 @@ export default function TwitchFollowingPage() {
     followerCounts,
     followsMeById,
     favoriteIds,
+    lastVideos.data,
+    noVideoCutoff,
   ]);
 
   const needsFollowsMe =
@@ -869,6 +912,12 @@ export default function TwitchFollowingPage() {
                                       channel.createdAt
                                         ? `created ${formatDate(channel.createdAt)}`
                                         : "",
+                                      lastVideos.data &&
+                                      channel.id in lastVideos.data
+                                        ? lastVideos.data[channel.id]
+                                          ? `last video ${formatDate(lastVideos.data[channel.id] ?? "")}`
+                                          : "no videos"
+                                        : "",
                                     ]
                                       .filter(Boolean)
                                       .join(" · ")}
@@ -938,6 +987,17 @@ export default function TwitchFollowingPage() {
                           );
                         })}
                 </div>
+                {usesLastVideos ? (
+                  <div className="text-[11px] text-paradise-200/60">
+                    {lastVideos.done
+                      ? ""
+                      : `Checking videos… ${Object.keys(lastVideos.data ?? {}).length} of ${channels.length} channels. `}
+                    Based on each channel’s newest past broadcast, highlight
+                    or upload. Twitch deletes past broadcasts after 7–60 days
+                    and not every streamer saves them, so active channels
+                    can show up here too.
+                  </div>
+                ) : null}
                 {followsMeLoaded && !(needsFollowsMe && !followsMe) ? (
                   <div className="text-[11px] text-paradise-200/60">
                     {followsMe ? (
