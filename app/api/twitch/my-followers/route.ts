@@ -6,11 +6,14 @@ import {
   noStoreHeaders,
   resolveAuthState,
 } from "@/lib/twitchAuth";
+import type { Follower } from "@/lib/followerChanges";
 
 interface TwitchChannelFollowersResponse {
   total?: number;
   data?: Array<{
     user_id?: string;
+    user_login?: string;
+    user_name?: string;
     followed_at?: string;
   }>;
   pagination?: { cursor?: string };
@@ -20,13 +23,13 @@ interface TwitchChannelFollowersResponse {
 // cap alongside auth; `truncated` tells the UI when the list is cut short.
 const MAX_PAGES = 40;
 
-// Who follows the connected account, as id → followed_at. Lets the follow
-// list mark channels that follow back.
+// Who follows the connected account, newest first. Powers the Followers tab
+// and the follow-back markers on the follow list.
 async function fetchMyFollowers(
   accessToken: string,
   userId: string,
 ): Promise<{
-  followers: Record<string, string>;
+  followers: Follower[];
   total: number;
   truncated: boolean;
 }> {
@@ -39,7 +42,7 @@ async function fetchMyFollowers(
     "Client-Id": TWITCH_CLIENT_ID,
   };
 
-  const followers: Record<string, string> = {};
+  const followers: Follower[] = [];
   let total = 0;
   let cursor: string | undefined;
 
@@ -66,8 +69,13 @@ async function fetchMyFollowers(
     }
 
     for (const item of payload.data ?? []) {
-      if (!item.user_id) continue;
-      followers[item.user_id] = item.followed_at ?? "";
+      if (!item.user_id || !item.user_login) continue;
+      followers.push({
+        id: item.user_id,
+        login: item.user_login,
+        name: item.user_name ?? item.user_login,
+        followedAt: item.followed_at ?? "",
+      });
     }
 
     cursor = payload.pagination?.cursor;
@@ -106,6 +114,7 @@ export async function GET(request: NextRequest) {
       {
         configured: true,
         connected: true,
+        userId: auth.userId,
         followers: result?.followers ?? null,
         total: result?.total ?? 0,
         truncated: result?.truncated ?? false,

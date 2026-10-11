@@ -4,6 +4,15 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaArrowLeft, FaExternalLinkAlt, FaTwitch } from "react-icons/fa";
 import Select, { type SelectOption } from "@/components/ui/Select";
+import FollowersView, {
+  useFollowerChanges,
+} from "@/components/twitch/FollowersView";
+import {
+  formatCount,
+  formatDate,
+  matchesQuery,
+} from "@/components/twitch/format";
+import type { Follower } from "@/lib/followerChanges";
 
 interface FollowedChannel {
   id: string;
@@ -45,7 +54,9 @@ interface BlockedResponse {
 }
 
 interface MyFollowersResponse {
-  followers?: Record<string, string> | null;
+  userId?: string;
+  followers?: Follower[] | null;
+  total?: number;
   truncated?: boolean;
 }
 
@@ -71,7 +82,7 @@ const FILTER_MODES = [
   "follows-you",
   "no-follow-back",
 ] as const;
-const VIEWS = ["following", "moderating", "blocked"] as const;
+const VIEWS = ["following", "followers", "moderating", "blocked"] as const;
 
 type SortMode = (typeof SORT_MODES)[number];
 type FilterMode = (typeof FILTER_MODES)[number];
@@ -106,31 +117,8 @@ function pick<T extends string>(
   return allowed.includes(value as T) ? (value as T) : null;
 }
 
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
-function formatCount(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-  return String(Math.max(0, Math.round(value)));
-}
 
-function matchesQuery(
-  channel: { name: string; login: string },
-  query: string,
-): boolean {
-  return (
-    channel.name.toLowerCase().includes(query) ||
-    channel.login.toLowerCase().includes(query)
-  );
-}
 
 function FollowsYouBadge({ since }: { since: string }) {
   const date = formatDate(since);
@@ -167,12 +155,12 @@ export default function TwitchFollowingPage() {
   const [moderated, setModerated] = useState<ModeratedChannel[] | null>(null);
   const [blocked, setBlocked] = useState<BlockedUser[] | null>(null);
   const [blockedLoaded, setBlockedLoaded] = useState(false);
-  // id → followed_at for everyone following you; null = permission missing.
-  const [followsMe, setFollowsMe] = useState<Record<string, string> | null>(
-    null,
-  );
+  // Everyone following you, newest first; null = permission missing.
+  const [followsMe, setFollowsMe] = useState<Follower[] | null>(null);
   const [followsMeLoaded, setFollowsMeLoaded] = useState(false);
   const [followsMeTruncated, setFollowsMeTruncated] = useState(false);
+  const [followsMeTotal, setFollowsMeTotal] = useState(0);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
   const [blockedError, setBlockedError] = useState<string | null>(null);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const [blockName, setBlockName] = useState("");
@@ -283,6 +271,8 @@ export default function TwitchFollowingPage() {
         if (cancelled) return;
         setFollowsMe(payload.followers ?? null);
         setFollowsMeTruncated(Boolean(payload.truncated));
+        setFollowsMeTotal(Number(payload.total ?? 0));
+        setMyUserId(payload.userId ?? null);
       })
       .catch(() => {
         if (!cancelled) setFollowsMe(null);
@@ -463,6 +453,25 @@ export default function TwitchFollowingPage() {
     })();
   }, [sortMode, channels]);
 
+  // id → when they followed you, for the follow-back markers and filters.
+  const followsMeById = useMemo(
+    () =>
+      followsMe
+        ? new Map(followsMe.map((follower) => [follower.id, follower.followedAt]))
+        : null,
+    [followsMe],
+  );
+  const followingIds = useMemo(
+    () => new Set(channels.map((channel) => channel.id)),
+    [channels],
+  );
+  const followerChanges = useFollowerChanges(
+    myUserId,
+    followsMe,
+    followsMeTruncated,
+  );
+  const newFollowerCount = followerChanges.changes?.gained.length ?? 0;
+
   const visibleChannels = useMemo(() => {
     let filtered = channels;
     if (filterMode === "live") {
@@ -476,12 +485,12 @@ export default function TwitchFollowingPage() {
         (channel) => channel.broadcasterType === "affiliate",
       );
     } else if (filterMode === "follows-you") {
-      filtered = followsMe
-        ? filtered.filter((channel) => channel.id in followsMe)
+      filtered = followsMeById
+        ? filtered.filter((channel) => followsMeById.has(channel.id))
         : [];
     } else if (filterMode === "no-follow-back") {
-      filtered = followsMe
-        ? filtered.filter((channel) => !(channel.id in followsMe))
+      filtered = followsMeById
+        ? filtered.filter((channel) => !followsMeById.has(channel.id))
         : [];
     }
     if (query) {
@@ -510,17 +519,17 @@ export default function TwitchFollowingPage() {
       sorted.sort((a, b) => b.followedAt.localeCompare(a.followedAt));
     }
     return sorted;
-  }, [channels, query, sortMode, filterMode, followerCounts, followsMe]);
+  }, [channels, query, sortMode, filterMode, followerCounts, followsMeById]);
 
   const needsFollowsMe =
     filterMode === "follows-you" || filterMode === "no-follow-back";
 
   const followBackCount = useMemo(
     () =>
-      followsMe
-        ? channels.filter((channel) => channel.id in followsMe).length
+      followsMeById
+        ? channels.filter((channel) => followsMeById.has(channel.id)).length
         : 0,
-    [channels, followsMe],
+    [channels, followsMeById],
   );
 
   const handleExportJson = () => {
@@ -664,6 +673,18 @@ export default function TwitchFollowingPage() {
                 Following · {total || channels.length}
               </button>
               <button
+                onClick={() => setView("followers")}
+                className={tabClass(view === "followers")}
+              >
+                Followers
+                {followsMe ? ` · ${followsMeTotal || followsMe.length}` : ""}
+                {newFollowerCount > 0 ? (
+                  <span className="ml-1 text-paradise-green">
+                    +{newFollowerCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
                 onClick={() => setView("moderating")}
                 className={tabClass(view === "moderating")}
               >
@@ -764,9 +785,11 @@ export default function TwitchFollowingPage() {
                                   <div className="truncate text-xs font-medium text-paradise-100">
                                     {channel.name}
                                     <TypeBadge type={channel.broadcasterType} />
-                                    {followsMe?.[channel.id] !== undefined ? (
+                                    {followsMeById?.has(channel.id) ? (
                                       <FollowsYouBadge
-                                        since={followsMe[channel.id]}
+                                        since={
+                                          followsMeById.get(channel.id) ?? ""
+                                        }
                                       />
                                     ) : null}
                                     <span className="ml-1.5 font-normal text-paradise-200/45">
@@ -862,6 +885,18 @@ export default function TwitchFollowingPage() {
                   open the channel and unfollow there.
                 </div>
               </>
+            ) : view === "followers" ? (
+              <FollowersView
+                followers={followsMe}
+                loaded={followsMeLoaded}
+                truncated={followsMeTruncated}
+                followingIds={followingIds}
+                query={query}
+                changes={followerChanges.changes}
+                snapshotAt={followerChanges.snapshotAt}
+                onMarkSeen={followerChanges.markSeen}
+                missingPermission={reconnectHint("followers")}
+              />
             ) : view === "moderating" ? (
               moderated === null ? (
                 reconnectHint("moderation")

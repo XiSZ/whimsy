@@ -34,19 +34,19 @@ function mockPages(pages: object[]) {
 }
 
 describe("GET /api/twitch/my-followers", () => {
-  it("walks all pages into an id → followed_at map", async () => {
+  it("walks all pages into a newest-first follower list", async () => {
     const fetchMock = mockPages([
       {
         total: 3,
         data: [
-          { user_id: "1", followed_at: "2024-01-01T00:00:00Z" },
-          { user_id: "2", followed_at: "2024-02-01T00:00:00Z" },
+          { user_id: "1", user_login: "one", user_name: "One", followed_at: "2024-01-01T00:00:00Z" },
+          { user_id: "2", user_login: "two", followed_at: "2024-02-01T00:00:00Z" },
         ],
         pagination: { cursor: "next" },
       },
       {
         total: 3,
-        data: [{ user_id: "3", followed_at: "2024-03-01T00:00:00Z" }],
+        data: [{ user_id: "3", user_login: "three", user_name: "Three", followed_at: "2024-03-01T00:00:00Z" }],
         pagination: {},
       },
     ]);
@@ -55,13 +55,15 @@ describe("GET /api/twitch/my-followers", () => {
 
     expect(payload).toMatchObject({
       connected: true,
+      userId: "42",
       total: 3,
       truncated: false,
-      followers: {
-        "1": "2024-01-01T00:00:00Z",
-        "2": "2024-02-01T00:00:00Z",
-        "3": "2024-03-01T00:00:00Z",
-      },
+      followers: [
+        { id: "1", login: "one", name: "One", followedAt: "2024-01-01T00:00:00Z" },
+        // A missing display name falls back to the login.
+        { id: "2", login: "two", name: "two", followedAt: "2024-02-01T00:00:00Z" },
+        { id: "3", login: "three", name: "Three", followedAt: "2024-03-01T00:00:00Z" },
+      ],
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[1][0])).toContain("after=next");
@@ -75,11 +77,11 @@ describe("GET /api/twitch/my-followers", () => {
     expect(payload).toMatchObject({ connected: true, followers: null });
   });
 
-  it("treats an account without followers as an empty map", async () => {
+  it("treats an account without followers as an empty list", async () => {
     mockPages([{ total: 0, data: [], pagination: {} }]);
 
     const payload = await (await GET(connectedRequest())).json();
 
-    expect(payload).toMatchObject({ followers: {}, total: 0 });
+    expect(payload).toMatchObject({ followers: [], total: 0 });
   });
 });
