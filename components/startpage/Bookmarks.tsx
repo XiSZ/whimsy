@@ -57,6 +57,7 @@ const categories: BookmarkCategory[] = [
     links: [
       { label: "PCPartPicker", url: "https://de.pcpartpicker.com/" },
       { label: "UserBenchmark", url: "https://www.userbenchmark.com/" },
+      { label: "TechPowerUp", url: "https://www.techpowerup.com/" },
     ],
   },
   {
@@ -64,12 +65,14 @@ const categories: BookmarkCategory[] = [
     links: [
       { label: "idealo", url: "https://www.idealo.de/" },
       { label: "Geizhals", url: "https://geizhals.de/" },
+      { label: "mydealz", url: "https://www.mydealz.de/" },
     ],
   },
 ];
 
 const STAGGER_MS = 60;
 
+// Tiles grow to fill an incomplete last row, so every row spans the same width.
 // Both layouts are rendered and the inactive one is hidden via the `strips:`
 // variant (driven by `data-bookmarks` on <html>), so the saved choice shows
 // on first paint without a layout jump after hydration.
@@ -80,7 +83,7 @@ export default function Bookmarks() {
         {categories.map((category, i) => (
           <Card
             key={category.title}
-            className="animate-stagger-in min-h-[160px] w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.667rem)] md:w-[calc(25%-0.75rem)] md:min-h-[180px]"
+            className="animate-stagger-in grow min-h-[160px] basis-[calc(50%-0.5rem)] sm:basis-[calc(33.333%-0.667rem)] md:basis-[calc(25%-0.75rem)] md:min-h-[180px]"
             style={{ animationDelay: `${i * STAGGER_MS}ms` }}
           >
             <div className="text-lg text-paradise-300 mb-1 text-center md:text-left">
