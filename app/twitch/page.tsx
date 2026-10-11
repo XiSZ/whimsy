@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaArrowLeft, FaExternalLinkAlt, FaTwitch } from "react-icons/fa";
+import {
+  FaArrowLeft,
+  FaExternalLinkAlt,
+  FaRegStar,
+  FaStar,
+  FaTwitch,
+} from "react-icons/fa";
 import Select, { type SelectOption } from "@/components/ui/Select";
 import FollowersView, {
   useFollowerChanges,
 } from "@/components/twitch/FollowersView";
+import ScheduleView from "@/components/twitch/ScheduleView";
 import {
   formatCount,
   formatDate,
@@ -77,12 +84,19 @@ const SORT_MODES = [
 const FILTER_MODES = [
   "all",
   "live",
+  "favorites",
   "partner",
   "affiliate",
   "follows-you",
   "no-follow-back",
 ] as const;
-const VIEWS = ["following", "followers", "moderating", "blocked"] as const;
+const VIEWS = [
+  "following",
+  "followers",
+  "schedule",
+  "moderating",
+  "blocked",
+] as const;
 
 type SortMode = (typeof SORT_MODES)[number];
 type FilterMode = (typeof FILTER_MODES)[number];
@@ -91,6 +105,7 @@ type View = (typeof VIEWS)[number];
 const FILTER_OPTIONS: SelectOption<FilterMode>[] = [
   { value: "all", label: "All" },
   { value: "live", label: "Live now" },
+  { value: "favorites", label: "Favorites" },
   { value: "partner", label: "Partners" },
   { value: "affiliate", label: "Affiliates" },
   { value: "follows-you", label: "Follows you" },
@@ -107,6 +122,7 @@ const SORT_OPTIONS: SelectOption<SortMode>[] = [
 ];
 
 const PREFS_KEY = "twitch-dashboard-prefs";
+const FAVORITES_KEY = "twitch-favorites";
 const FOLLOWER_CACHE_KEY = "twitch-follower-counts";
 const FOLLOWER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -161,6 +177,8 @@ export default function TwitchFollowingPage() {
   const [followsMeTruncated, setFollowsMeTruncated] = useState(false);
   const [followsMeTotal, setFollowsMeTotal] = useState(0);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  // Starred channel ids; they drive the Schedule tab.
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [blockedError, setBlockedError] = useState<string | null>(null);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const [blockName, setBlockName] = useState("");
@@ -198,6 +216,14 @@ export default function TwitchFollowingPage() {
       if (sort) setSortMode(sort);
       if (filter) setFilterMode(filter);
       if (storedView) setView(storedView);
+      const storedFavorites = JSON.parse(
+        localStorage.getItem(FAVORITES_KEY) ?? "[]",
+      ) as unknown;
+      if (Array.isArray(storedFavorites)) {
+        setFavoriteIds(
+          storedFavorites.filter((id): id is string => typeof id === "string"),
+        );
+      }
     } catch {
       // Corrupt prefs — defaults win.
     }
@@ -307,6 +333,20 @@ export default function TwitchFollowingPage() {
       cancelled = true;
     };
   }, [view, blockedLoaded]);
+
+  const toggleFavorite = (id: string) => {
+    setFavoriteIds((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((favorite) => favorite !== id)
+        : [...prev, id];
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      } catch {
+        // Storage unavailable — the star just won't stick.
+      }
+      return next;
+    });
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -476,6 +516,8 @@ export default function TwitchFollowingPage() {
     let filtered = channels;
     if (filterMode === "live") {
       filtered = filtered.filter((channel) => channel.live);
+    } else if (filterMode === "favorites") {
+      filtered = filtered.filter((channel) => favoriteIds.includes(channel.id));
     } else if (filterMode === "partner") {
       filtered = filtered.filter(
         (channel) => channel.broadcasterType === "partner",
@@ -519,7 +561,15 @@ export default function TwitchFollowingPage() {
       sorted.sort((a, b) => b.followedAt.localeCompare(a.followedAt));
     }
     return sorted;
-  }, [channels, query, sortMode, filterMode, followerCounts, followsMeById]);
+  }, [
+    channels,
+    query,
+    sortMode,
+    filterMode,
+    followerCounts,
+    followsMeById,
+    favoriteIds,
+  ]);
 
   const needsFollowsMe =
     filterMode === "follows-you" || filterMode === "no-follow-back";
@@ -685,6 +735,12 @@ export default function TwitchFollowingPage() {
                 ) : null}
               </button>
               <button
+                onClick={() => setView("schedule")}
+                className={tabClass(view === "schedule")}
+              >
+                Schedule
+              </button>
+              <button
                 onClick={() => setView("moderating")}
                 className={tabClass(view === "moderating")}
               >
@@ -698,47 +754,49 @@ export default function TwitchFollowingPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search channels..."
-                className="w-full rounded-md border border-[#2d2d2d]/80 bg-black/25 px-2 py-1 text-xs text-paradise-100 placeholder:text-paradise-200/40 focus:outline-none focus:border-[#7d66d8]/70"
-              />
-              {view === "following" ? (
-                <>
-                  <Select
-                    aria-label="Filter channels"
-                    value={filterMode}
-                    options={FILTER_OPTIONS}
-                    onChange={setFilterMode}
-                    className="sm:w-40 sm:shrink-0"
-                  />
-                  <Select
-                    aria-label="Sort channels"
-                    value={sortMode}
-                    options={SORT_OPTIONS}
-                    onChange={setSortMode}
-                    className="sm:w-44 sm:shrink-0"
-                  />
-                  <button
-                    onClick={handleExportCsv}
-                    title="Download the full list as CSV"
-                    className="whitespace-nowrap rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200"
-                  >
-                    CSV
-                  </button>
-                  <button
-                    onClick={handleExportJson}
-                    title="Download the full list as JSON"
-                    className="whitespace-nowrap rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200"
-                  >
-                    JSON
-                  </button>
-                </>
-              ) : null}
-            </div>
+            {view !== "schedule" ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search channels..."
+                  className="w-full rounded-md border border-[#2d2d2d]/80 bg-black/25 px-2 py-1 text-xs text-paradise-100 placeholder:text-paradise-200/40 focus:outline-none focus:border-[#7d66d8]/70"
+                />
+                {view === "following" ? (
+                  <>
+                    <Select
+                      aria-label="Filter channels"
+                      value={filterMode}
+                      options={FILTER_OPTIONS}
+                      onChange={setFilterMode}
+                      className="sm:w-40 sm:shrink-0"
+                    />
+                    <Select
+                      aria-label="Sort channels"
+                      value={sortMode}
+                      options={SORT_OPTIONS}
+                      onChange={setSortMode}
+                      className="sm:w-44 sm:shrink-0"
+                    />
+                    <button
+                      onClick={handleExportCsv}
+                      title="Download the full list as CSV"
+                      className="whitespace-nowrap rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200"
+                    >
+                      CSV
+                    </button>
+                    <button
+                      onClick={handleExportJson}
+                      title="Download the full list as JSON"
+                      className="whitespace-nowrap rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200"
+                    >
+                      JSON
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
 
             {view === "following" ? (
               <>
@@ -833,6 +891,31 @@ export default function TwitchFollowingPage() {
                                   >
                                     <FaExternalLinkAlt className="text-[10px]" />
                                   </a>
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      toggleFavorite(channel.id);
+                                    }}
+                                    title={
+                                      favoriteIds.includes(channel.id)
+                                        ? "Remove from favorites"
+                                        : "Add to favorites"
+                                    }
+                                    aria-pressed={favoriteIds.includes(
+                                      channel.id,
+                                    )}
+                                    className={
+                                      favoriteIds.includes(channel.id)
+                                        ? "text-paradise-yellow transition-colors hover:text-paradise-yellow/70"
+                                        : "text-paradise-200/30 transition-colors hover:text-paradise-yellow"
+                                    }
+                                  >
+                                    {favoriteIds.includes(channel.id) ? (
+                                      <FaStar className="text-[11px]" />
+                                    ) : (
+                                      <FaRegStar className="text-[11px]" />
+                                    )}
+                                  </button>
                                 </div>
                               </div>
                               {isExpanded ? (
@@ -897,6 +980,8 @@ export default function TwitchFollowingPage() {
                 onMarkSeen={followerChanges.markSeen}
                 missingPermission={reconnectHint("followers")}
               />
+            ) : view === "schedule" ? (
+              <ScheduleView favoriteIds={favoriteIds} channels={channels} />
             ) : view === "moderating" ? (
               moderated === null ? (
                 reconnectHint("moderation")
