@@ -44,6 +44,11 @@ interface BlockedResponse {
   blocked?: BlockedUser[] | null;
 }
 
+interface MyFollowersResponse {
+  followers?: Record<string, string> | null;
+  truncated?: boolean;
+}
+
 interface ChannelDetail {
   lastStreamedAt: string | null;
   followers: number | null;
@@ -58,7 +63,14 @@ const SORT_MODES = [
   "followers",
   "viewers",
 ] as const;
-const FILTER_MODES = ["all", "live", "partner", "affiliate"] as const;
+const FILTER_MODES = [
+  "all",
+  "live",
+  "partner",
+  "affiliate",
+  "follows-you",
+  "no-follow-back",
+] as const;
 const VIEWS = ["following", "moderating", "blocked"] as const;
 
 type SortMode = (typeof SORT_MODES)[number];
@@ -70,6 +82,8 @@ const FILTER_OPTIONS: SelectOption<FilterMode>[] = [
   { value: "live", label: "Live now" },
   { value: "partner", label: "Partners" },
   { value: "affiliate", label: "Affiliates" },
+  { value: "follows-you", label: "Follows you" },
+  { value: "no-follow-back", label: "Not following back" },
 ];
 const SORT_OPTIONS: SelectOption<SortMode>[] = [
   { value: "recent", label: "Newest follows" },
@@ -118,6 +132,18 @@ function matchesQuery(
   );
 }
 
+function FollowsYouBadge({ since }: { since: string }) {
+  const date = formatDate(since);
+  return (
+    <span
+      title={date ? `Follows you since ${date}` : "Follows you"}
+      className="ml-1.5 rounded bg-paradise-green/20 px-1 py-0.5 text-[9px] font-normal uppercase tracking-wide text-paradise-green"
+    >
+      Follows you
+    </span>
+  );
+}
+
 function TypeBadge({ type }: { type?: string }) {
   if (type === "partner") {
     return (
@@ -141,6 +167,12 @@ export default function TwitchFollowingPage() {
   const [moderated, setModerated] = useState<ModeratedChannel[] | null>(null);
   const [blocked, setBlocked] = useState<BlockedUser[] | null>(null);
   const [blockedLoaded, setBlockedLoaded] = useState(false);
+  // id → followed_at for everyone following you; null = permission missing.
+  const [followsMe, setFollowsMe] = useState<Record<string, string> | null>(
+    null,
+  );
+  const [followsMeLoaded, setFollowsMeLoaded] = useState(false);
+  const [followsMeTruncated, setFollowsMeTruncated] = useState(false);
   const [blockedError, setBlockedError] = useState<string | null>(null);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const [blockName, setBlockName] = useState("");
@@ -239,6 +271,28 @@ export default function TwitchFollowingPage() {
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/twitch/my-followers", { cache: "no-store" })
+      .then((response) => response.json() as Promise<MyFollowersResponse>)
+      .then((payload) => {
+        if (cancelled) return;
+        setFollowsMe(payload.followers ?? null);
+        setFollowsMeTruncated(Boolean(payload.truncated));
+      })
+      .catch(() => {
+        if (!cancelled) setFollowsMe(null);
+      })
+      .finally(() => {
+        if (!cancelled) setFollowsMeLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -421,6 +475,14 @@ export default function TwitchFollowingPage() {
       filtered = filtered.filter(
         (channel) => channel.broadcasterType === "affiliate",
       );
+    } else if (filterMode === "follows-you") {
+      filtered = followsMe
+        ? filtered.filter((channel) => channel.id in followsMe)
+        : [];
+    } else if (filterMode === "no-follow-back") {
+      filtered = followsMe
+        ? filtered.filter((channel) => !(channel.id in followsMe))
+        : [];
     }
     if (query) {
       filtered = filtered.filter((channel) => matchesQuery(channel, query));
@@ -448,11 +510,22 @@ export default function TwitchFollowingPage() {
       sorted.sort((a, b) => b.followedAt.localeCompare(a.followedAt));
     }
     return sorted;
-  }, [channels, query, sortMode, filterMode, followerCounts]);
+  }, [channels, query, sortMode, filterMode, followerCounts, followsMe]);
+
+  const needsFollowsMe =
+    filterMode === "follows-you" || filterMode === "no-follow-back";
+
+  const followBackCount = useMemo(
+    () =>
+      followsMe
+        ? channels.filter((channel) => channel.id in followsMe).length
+        : 0,
+    [channels, followsMe],
+  );
 
   const handleExportJson = () => {
     downloadFile(
-      JSON.stringify(visibleChannels, null, 2),
+      JSON.stringify(channels, null, 2),
       "application/json",
       "twitch-follows.json",
     );
@@ -469,7 +542,7 @@ export default function TwitchFollowingPage() {
       "last_title",
       "live",
     ];
-    const rows = visibleChannels.map((channel) => [
+    const rows = channels.map((channel) => [
       channel.name,
       channel.login,
       channel.followedAt,
@@ -619,7 +692,7 @@ export default function TwitchFollowingPage() {
                     value={filterMode}
                     options={FILTER_OPTIONS}
                     onChange={setFilterMode}
-                    className="sm:w-28 sm:shrink-0"
+                    className="sm:w-40 sm:shrink-0"
                   />
                   <Select
                     aria-label="Sort channels"
@@ -651,7 +724,11 @@ export default function TwitchFollowingPage() {
                 <div className="twitch-scroll grid max-h-[60vh] gap-1 overflow-y-auto">
                   {channels.length === 0
                     ? emptyRow("You are not following anyone yet.")
-                    : visibleChannels.length === 0
+                    : needsFollowsMe && !followsMe
+                      ? followsMeLoaded
+                        ? reconnectHint("followers")
+                        : emptyRow("Checking who follows you back...")
+                      : visibleChannels.length === 0
                       ? emptyRow("No channels match the current filters.")
                       : visibleChannels.map((channel) => {
                           const detail = details[channel.id];
@@ -687,6 +764,11 @@ export default function TwitchFollowingPage() {
                                   <div className="truncate text-xs font-medium text-paradise-100">
                                     {channel.name}
                                     <TypeBadge type={channel.broadcasterType} />
+                                    {followsMe?.[channel.id] !== undefined ? (
+                                      <FollowsYouBadge
+                                        since={followsMe[channel.id]}
+                                      />
+                                    ) : null}
                                     <span className="ml-1.5 font-normal text-paradise-200/45">
                                       @{channel.login}
                                     </span>
@@ -750,6 +832,30 @@ export default function TwitchFollowingPage() {
                           );
                         })}
                 </div>
+                {followsMeLoaded && !(needsFollowsMe && !followsMe) ? (
+                  <div className="text-[11px] text-paradise-200/60">
+                    {followsMe ? (
+                      <>
+                        {followBackCount} of {channels.length} channels follow
+                        you back
+                        {followsMeTruncated
+                          ? " (only your newest 4,000 followers were checked)"
+                          : ""}
+                        .
+                      </>
+                    ) : (
+                      <>
+                        <a
+                          href="/api/twitch/oauth/start"
+                          className="text-[#d8cfff] underline decoration-[#7d66d8]/60 underline-offset-2 hover:text-white"
+                        >
+                          Reconnect Twitch
+                        </a>{" "}
+                        once to see which channels follow you back.
+                      </>
+                    )}
+                  </div>
+                ) : null}
                 <div className="text-[10px] text-paradise-200/45">
                   Click a channel for last-streamed date and follower count.
                   Twitch removed follow management from its API — to unfollow,

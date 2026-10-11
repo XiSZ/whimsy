@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set(
     "scope",
-    "user:read:follows user:read:moderated_channels user:read:blocked_users user:manage:blocked_users",
+    "user:read:follows user:read:moderated_channels user:read:blocked_users user:manage:blocked_users moderator:read:followers",
   );
   authUrl.searchParams.set("state", state);
 
