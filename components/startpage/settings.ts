@@ -8,6 +8,8 @@ export interface AppSettings {
   openInNewTab: boolean;
   // Hex color overriding the default accent; null keeps the built-in palette.
   accentColor: string | null;
+  // Hex base for the animated background; null keeps the default navy.
+  backgroundColor: string | null;
   bookmarkLayout: BookmarkLayout;
 }
 
@@ -16,6 +18,7 @@ const SETTINGS_EVENT = "whimsy-settings-changed";
 const DEFAULTS: AppSettings = {
   openInNewTab: false,
   accentColor: null,
+  backgroundColor: null,
   bookmarkLayout: "tiles",
 };
 

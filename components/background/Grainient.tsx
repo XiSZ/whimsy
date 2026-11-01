@@ -182,6 +182,11 @@ export default function Grainient({
   className = "",
 }: GrainientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // Colors live in uniforms updated by their own effect below, so a new color
+  // (e.g. dragging the background picker) repaints instead of rebuilding the
+  // WebGL context and restarting the animation.
+  const programRef = useRef<Program | null>(null);
+  const renderRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -227,13 +232,16 @@ export default function Grainient({
         uSaturation: { value: saturation },
         uCenterOffset: { value: new Float32Array([centerX, centerY]) },
         uZoom: { value: zoom },
-        uColor1: { value: new Float32Array(hexToRgb(color1)) },
-        uColor2: { value: new Float32Array(hexToRgb(color2)) },
-        uColor3: { value: new Float32Array(hexToRgb(color3)) },
+        // Filled by the color effect, which runs right after this one.
+        uColor1: { value: new Float32Array(3) },
+        uColor2: { value: new Float32Array(3) },
+        uColor3: { value: new Float32Array(3) },
       },
     });
 
     const mesh = new Mesh(gl, { geometry, program });
+    programRef.current = program;
+    renderRef.current = () => renderer.render({ scene: mesh });
 
     const setSize = () => {
       const rect = container.getBoundingClientRect();
@@ -268,6 +276,8 @@ export default function Grainient({
     });
 
     return () => {
+      programRef.current = null;
+      renderRef.current = null;
       cancelAnimationFrame(raf);
       ro.disconnect();
       try {
@@ -296,10 +306,17 @@ export default function Grainient({
     centerX,
     centerY,
     zoom,
-    color1,
-    color2,
-    color3,
   ]);
+
+  useEffect(() => {
+    const program = programRef.current;
+    if (!program) return;
+    (program.uniforms.uColor1.value as Float32Array).set(hexToRgb(color1));
+    (program.uniforms.uColor2.value as Float32Array).set(hexToRgb(color2));
+    (program.uniforms.uColor3.value as Float32Array).set(hexToRgb(color3));
+    // Reduced motion runs no loop, so repaint the static frame by hand.
+    renderRef.current?.();
+  }, [color1, color2, color3]);
 
   return (
     <div

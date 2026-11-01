@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FaCog } from "react-icons/fa";
 import clsx from "clsx";
+import { DEFAULT_BACKGROUND } from "@/components/background/useGrainient";
 import { useAppSettings, type BookmarkLayout } from "./settings";
 
 // Shown in the picker while no custom accent is set (the progress-bar orange).
@@ -64,6 +65,30 @@ export default function SettingsPanel() {
                 value={settings.accentColor ?? DEFAULT_ACCENT}
                 onChange={(event) =>
                   update({ accentColor: event.target.value })
+                }
+                className="h-6 w-8 cursor-pointer rounded border border-[#2d2d2d]/70 bg-transparent"
+              />
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2 text-sm text-paradise-100/85">
+            <label htmlFor="background-color" className="cursor-pointer">
+              Background
+            </label>
+            <div className="flex items-center gap-2">
+              {settings.backgroundColor && (
+                <button
+                  onClick={() => update({ backgroundColor: null })}
+                  className="text-[11px] text-paradise-200/60 transition-colors hover:text-paradise-200 cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+              <input
+                id="background-color"
+                type="color"
+                value={settings.backgroundColor ?? DEFAULT_BACKGROUND}
+                onChange={(event) =>
+                  update({ backgroundColor: event.target.value })
                 }
                 className="h-6 w-8 cursor-pointer rounded border border-[#2d2d2d]/70 bg-transparent"
               />
