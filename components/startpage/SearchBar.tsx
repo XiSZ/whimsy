@@ -90,9 +90,6 @@ const URL_LIKE = /^[\w-]+(\.[\w-]+)*\.[a-z]{2,}(\/\S*)?$/i;
 
 type EngineKey = (typeof engines)[number]["key"];
 
-// Rendered as their own row below the web search engines.
-const AI_ENGINES = new Set<EngineKey>(["claude", "gemini", "perplexity", "duckai"]);
-
 const placeholders: Record<EngineKey, string[]> = {
   google: [
     "Where to buy pipebombs near me?",
@@ -299,44 +296,33 @@ export default function SearchBar() {
         </span>
       </div>
 
-      {/* Web search on top, AI assistants below; each row is an equal-column
-          grid, so both run flush with the search bar's edges. */}
-      {[false, true].map((ai) => (
-        <div
-          key={String(ai)}
-          className={clsx(
-            "grid gap-2",
-            ai ? "mt-2 grid-cols-4" : "mt-3 grid-cols-6",
-          )}
-        >
-          {engines
-            .filter((engine) => AI_ENGINES.has(engine.key) === ai)
-            .map((engine) => {
-              const Icon: IconType = engine.icon;
-              const isActive = currentEngine === engine.key;
+      {/* Two even rows of five, flush with the search bar's edges. */}
+      <div className="mt-3 grid grid-cols-5 gap-2">
+        {engines.map((engine) => {
+          const Icon: IconType = engine.icon;
+          const isActive = currentEngine === engine.key;
 
-              return (
-                <button
-                  key={engine.key}
-                  onClick={() => {
-                    setCurrentEngine(engine.key);
-                    setPlaceholder(randomPlaceholder(engine.key));
-                  }}
-                  title={engine.label}
-                  className={clsx(
-                    "flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm border transition-all duration-300 cursor-pointer",
-                    isActive
-                      ? "bg-paradise-300 text-paradise-bg border-paradise-300 font-medium"
-                      : "bg-[#161616]/62 border-[#2d2d2d]/70 text-paradise-100/85 hover:border-paradise-100/30 hover:text-paradise-100 backdrop-blur-lg backdrop-saturate-150",
-                  )}
-                >
-                  <Icon className="text-xs" />
-                  <span className="hidden sm:inline">{engine.label}</span>
-                </button>
-              );
-            })}
-        </div>
-      ))}
+          return (
+            <button
+              key={engine.key}
+              onClick={() => {
+                setCurrentEngine(engine.key);
+                setPlaceholder(randomPlaceholder(engine.key));
+              }}
+              title={engine.label}
+              className={clsx(
+                "flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm border transition-all duration-300 cursor-pointer",
+                isActive
+                  ? "bg-paradise-300 text-paradise-bg border-paradise-300 font-medium"
+                  : "bg-[#161616]/62 border-[#2d2d2d]/70 text-paradise-100/85 hover:border-paradise-100/30 hover:text-paradise-100 backdrop-blur-lg backdrop-saturate-150",
+              )}
+            >
+              <Icon className="text-xs" />
+              <span className="hidden sm:inline">{engine.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

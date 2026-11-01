@@ -140,14 +140,15 @@ export default function Bookmarks() {
         ))}
       </div>
 
-      {/* One panel sharing one grid: rows are subgrids, so titles and links
-          line up in columns across every category. Narrow screens scroll the
-          whole table sideways instead of wrapping. */}
-      <Card className="hidden strips:grid animate-stagger-in w-full p-0! overflow-x-auto! [scrollbar-width:none] grid-cols-[auto_repeat(4,minmax(max-content,1fr))] gap-x-4">
-        {categories.map((category) => (
-          <div
+      {/* Separate strips that share one grid: each strip is a subgrid, so
+          titles and links line up in columns across all of them. Narrow
+          screens scroll the whole stack sideways instead of wrapping. */}
+      <div className="hidden strips:grid w-full overflow-x-auto [scrollbar-width:none] grid-cols-[auto_repeat(4,minmax(max-content,1fr))] gap-x-4 gap-y-2">
+        {categories.map((category, i) => (
+          <Card
             key={category.title}
-            className="col-span-5 grid grid-cols-subgrid items-center border-t border-[#2d2d2d]/70 px-4 py-2.5 first:border-t-0"
+            className="animate-stagger-in col-span-5 grid! grid-cols-subgrid items-center px-4 py-2.5"
+            style={{ animationDelay: `${i * STAGGER_MS}ms` }}
           >
             <div className="whitespace-nowrap pr-2 text-[11px] uppercase tracking-wide text-paradise-300">
               {category.title}
@@ -161,9 +162,9 @@ export default function Bookmarks() {
                 {link.label}
               </a>
             ))}
-          </div>
+          </Card>
         ))}
-      </Card>
+      </div>
     </>
   );
 }
