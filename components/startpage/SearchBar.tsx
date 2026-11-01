@@ -299,14 +299,14 @@ export default function SearchBar() {
         </span>
       </div>
 
-      {/* Web search on top, AI assistants below: two intentional rows instead
-          of one row that wraps wherever it runs out of space. */}
+      {/* Web search on top, AI assistants below; each row is an equal-column
+          grid, so both run flush with the search bar's edges. */}
       {[false, true].map((ai) => (
         <div
           key={String(ai)}
           className={clsx(
-            "flex flex-wrap justify-center gap-2",
-            ai ? "mt-2" : "mt-3",
+            "grid gap-2",
+            ai ? "mt-2 grid-cols-4" : "mt-3 grid-cols-6",
           )}
         >
           {engines
@@ -324,7 +324,7 @@ export default function SearchBar() {
                   }}
                   title={engine.label}
                   className={clsx(
-                    "flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm border transition-all duration-300 cursor-pointer",
+                    "flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm border transition-all duration-300 cursor-pointer",
                     isActive
                       ? "bg-paradise-300 text-paradise-bg border-paradise-300 font-medium"
                       : "bg-[#161616]/62 border-[#2d2d2d]/70 text-paradise-100/85 hover:border-paradise-100/30 hover:text-paradise-100 backdrop-blur-lg backdrop-saturate-150",

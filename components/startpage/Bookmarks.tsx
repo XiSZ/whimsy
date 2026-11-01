@@ -140,33 +140,30 @@ export default function Bookmarks() {
         ))}
       </div>
 
-      <div className="hidden strips:flex flex-col gap-2 w-full max-w-2xl mx-auto">
-        {categories.map((category, i) => (
-          <Card
+      {/* One panel sharing one grid: rows are subgrids, so titles and links
+          line up in columns across every category. Narrow screens scroll the
+          whole table sideways instead of wrapping. */}
+      <Card className="hidden strips:grid animate-stagger-in w-full p-0! overflow-x-auto! [scrollbar-width:none] grid-cols-[auto_repeat(4,minmax(max-content,1fr))] gap-x-4">
+        {categories.map((category) => (
+          <div
             key={category.title}
-            className="animate-stagger-in flex-row! items-center gap-4 px-4 py-2.5"
-            style={{ animationDelay: `${i * STAGGER_MS}ms` }}
+            className="col-span-5 grid grid-cols-subgrid items-center border-t border-[#2d2d2d]/70 px-4 py-2.5 first:border-t-0"
           >
-            <div className="w-20 shrink-0 whitespace-nowrap text-sm text-paradise-300 sm:w-24">
+            <div className="whitespace-nowrap pr-2 text-[11px] uppercase tracking-wide text-paradise-300">
               {category.title}
             </div>
-
-            {/* One line per strip; narrow screens scroll it sideways. w-0 keeps
-                the unwrapped links from widening the page itself. */}
-            <div className="flex w-0 flex-1 flex-nowrap gap-x-5 overflow-x-auto [scrollbar-width:none]">
-              {category.links.map((link) => (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  className="shrink-0 whitespace-nowrap text-sm py-0.5 text-paradise-100/85 transition-colors duration-200 hover:text-paradise-200 hover:underline decoration-paradise-300/60 underline-offset-4"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          </Card>
+            {category.links.map((link) => (
+              <a
+                key={link.url}
+                href={link.url}
+                className="whitespace-nowrap text-sm text-paradise-100/85 transition-colors duration-200 hover:text-paradise-200 hover:underline decoration-paradise-300/60 underline-offset-4"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
         ))}
-      </div>
+      </Card>
     </>
   );
 }

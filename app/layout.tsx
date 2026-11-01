@@ -57,7 +57,9 @@ export default function RootLayout({
           <Suspense>
             <GrainientLoader />
           </Suspense>
-          <div className="w-full max-w-5xl px-6">
+          {/* min-w-0: wide unwrapped content (e.g. the bookmark strips on a
+              phone) scrolls inside its box instead of widening the page. */}
+          <div className="w-full min-w-0 max-w-5xl px-6">
             {children}
           </div>
         </div>
