@@ -62,7 +62,8 @@ const engines = [
     label: "Gemini",
     bang: "gem",
     icon: SiGooglegemini,
-    url: "https://gemini.google.com/app?hl=en&input=",
+    // ponytail: undocumented but working prefill param; `input=` was ignored.
+    url: "https://gemini.google.com/app?q=",
   },
   {
     key: "perplexity",
@@ -70,6 +71,14 @@ const engines = [
     bang: "p",
     icon: SiPerplexity,
     url: "https://www.perplexity.ai/search?q=",
+  },
+  {
+    key: "duckai",
+    label: "Duck.ai",
+    bang: "dai",
+    icon: SiDuckduckgo,
+    // ponytail: unofficial; `ia=chat&duckai=1` opens Duck.ai with the prompt.
+    url: "https://duckduckgo.com/?ia=chat&duckai=1&q=",
   },
 ] as const;
 
@@ -156,6 +165,13 @@ const placeholders: Record<EngineKey, string[]> = {
     "Roast my README",
     "Write a commit message that doesn't reveal my shame",
   ],
+  duckai: [
+    "AI chat but the duck keeps my secrets",
+    "Ask a robot without telling anyone",
+    "Private question, private answer",
+    "Which model is behind the duck today",
+    "Explain it like the duck explains it",
+  ],
   gemini: [
     "Google but make it feel like the future",
     "Search this but also summarize it but also vibe check it",
@@ -214,9 +230,12 @@ export default function SearchBar() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return;
+    // isComposing: Enter that only confirms an IME/autocomplete pick.
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
 
-    let query = value.trim();
+    // Read the field itself, not `value`: a picked browser suggestion can
+    // land in the input before the state update does.
+    let query = e.currentTarget.value.trim();
     if (!query) return;
 
     let engine = engines.find((eng) => eng.key === currentEngine);
@@ -277,7 +296,7 @@ export default function SearchBar() {
         </span>
       </div>
 
-      <div className="flex justify-center gap-2 mt-3">
+      <div className="flex flex-wrap justify-center gap-2 mt-3">
         {engines.map((engine) => {
           const Icon: IconType = engine.icon;
           const isActive = currentEngine === engine.key;
