@@ -42,4 +42,5 @@ next-env.d.ts
 # local agent tooling state
 .claude-flow/
 .claude/
+.swarm/
 .mypy_cache/

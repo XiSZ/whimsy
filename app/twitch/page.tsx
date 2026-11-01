@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaExternalLinkAlt,
@@ -200,11 +200,6 @@ export default function TwitchFollowingPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
-  const [followerCounts, setFollowerCounts] = useState<Record<
-    string,
-    number | null
-  > | null>(null);
-  const followersFetchStarted = useRef(false);
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [view, setView] = useState<View>("following");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -442,66 +437,6 @@ export default function TwitchFollowingPage() {
 
   const query = search.trim().toLowerCase();
 
-  // Follower totals are one Twitch call per channel, so only fetch them the
-  // first time the "Most followed" sort is picked, in server-friendly chunks.
-  // Counts are cached in localStorage for 24h (they move slowly); only ids
-  // missing from the cache are fetched. The list reorders as chunks land.
-  useEffect(() => {
-    if (sortMode !== "followers" || channels.length === 0) return;
-    if (followersFetchStarted.current) return;
-    followersFetchStarted.current = true;
-
-    let cachedAt = 0;
-    let cached: Record<string, number | null> = {};
-    try {
-      const stored = JSON.parse(
-        localStorage.getItem(FOLLOWER_CACHE_KEY) ?? "",
-      ) as { at?: number; counts?: Record<string, number | null> };
-      if (Date.now() - Number(stored?.at ?? 0) < FOLLOWER_CACHE_TTL_MS) {
-        cachedAt = Number(stored.at);
-        cached = stored.counts ?? {};
-      }
-    } catch {
-      // No usable cache.
-    }
-    if (Object.keys(cached).length > 0) setFollowerCounts(cached);
-
-    const missing = channels
-      .map((channel) => channel.id)
-      .filter((id) => !(id in cached));
-
-    (async () => {
-      const merged = { ...cached };
-      for (let i = 0; i < missing.length; i += 35) {
-        try {
-          const response = await fetch(
-            `/api/twitch/followers?ids=${missing.slice(i, i + 35).join(",")}`,
-          );
-          if (!response.ok) continue;
-          const payload = (await response.json()) as {
-            counts?: Record<string, number | null>;
-          };
-          Object.assign(merged, payload?.counts ?? {});
-          setFollowerCounts({ ...merged });
-        } catch {
-          // Skip failed chunks — those channels just sort to the bottom.
-        }
-      }
-      if (missing.length > 0) {
-        try {
-          // Keep the original stamp when topping up a fresh cache, so the
-          // whole thing still expires 24h after the last full fetch.
-          localStorage.setItem(
-            FOLLOWER_CACHE_KEY,
-            JSON.stringify({ at: cachedAt || Date.now(), counts: merged }),
-          );
-        } catch {
-          // Storage full/unavailable — counts just aren't cached.
-        }
-      }
-    })();
-  }, [sortMode, channels]);
-
   // id → when they followed you, for the follow-back markers and filters.
   const followsMeById = useMemo(
     () =>
@@ -537,6 +472,16 @@ export default function TwitchFollowingPage() {
     cacheKey: LAST_VIDEO_CACHE_KEY,
     ttlMs: FOLLOWER_CACHE_TTL_MS,
   });
+  // Follower totals for "Most followed": same per-channel cost, loaded the
+  // first time that sort is picked.
+  const followerCounts = useCachedChannelData<number | null>({
+    enabled: sortMode === "followers",
+    ids: channelIdList,
+    endpoint: "/api/twitch/followers",
+    field: "counts",
+    cacheKey: FOLLOWER_CACHE_KEY,
+    ttlMs: FOLLOWER_CACHE_TTL_MS,
+  }).data;
   const [noVideoCutoff] = useState(
     () => Date.now() - NO_VIDEO_DAYS * 24 * 60 * 60 * 1000,
   );

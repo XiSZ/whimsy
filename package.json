@@ -10,13 +10,7 @@
     "start": "next start -p 3000",
     "icon:prepare": "python scripts/prepare_icon.py",
     "prefavicon:generate": "npm run icon:prepare",
-    "favicon:generate": "npx --yes png-to-ico public/xisz-icon-square.png > public/favicon.ico",
-    "dev:npm": "npm run dev",
-    "build:npm": "npm run build",
-    "start:npm": "npm run start",
-    "dev:pnpm": "pnpm dev",
-    "build:pnpm": "pnpm build",
-    "start:pnpm": "pnpm start"
+    "favicon:generate": "npx --yes png-to-ico public/xisz-icon-square.png > public/favicon.ico"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.5",
