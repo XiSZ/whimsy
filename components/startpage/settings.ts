@@ -12,6 +12,9 @@ export interface AppSettings {
   accentColor: string | null;
   // Hex base for the animated background; null keeps the default navy.
   backgroundColor: string | null;
+  // "custom" shows the user's own image/video (kept in IndexedDB, see
+  // components/background/backgroundFile.ts) instead of the gradient.
+  backgroundMode: "gradient" | "custom";
   bookmarkLayout: BookmarkLayout;
 }
 
@@ -22,6 +25,7 @@ const DEFAULTS: AppSettings = {
   twitchNewTab: true,
   accentColor: null,
   backgroundColor: null,
+  backgroundMode: "gradient",
   bookmarkLayout: "tiles",
 };
 

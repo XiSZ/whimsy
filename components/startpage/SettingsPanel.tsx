@@ -1,10 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { FaCog } from "react-icons/fa";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
+import { FaCog, FaImage } from "react-icons/fa";
 import clsx from "clsx";
 import { DEFAULT_BACKGROUND } from "@/components/background/useGrainient";
-import { useAppSettings, type BookmarkLayout } from "./settings";
+import {
+  saveBackgroundFile,
+  useBackgroundFile,
+} from "@/components/background/backgroundFile";
+import {
+  useAppSettings,
+  type AppSettings,
+  type BookmarkLayout,
+} from "./settings";
 
 // Shown while no custom accent is set (the progress-bar orange).
 const DEFAULT_ACCENT = "#ff9b3f";
@@ -23,6 +37,49 @@ const LAYOUT_OPTIONS: { value: BookmarkLayout; label: string }[] = [
   { value: "tiles", label: "Tiles" },
   { value: "strips", label: "Strips" },
 ];
+
+type BackgroundMode = AppSettings["backgroundMode"];
+const BACKGROUND_MODES: { value: BackgroundMode; label: string }[] = [
+  { value: "gradient", label: "Gradient" },
+  { value: "custom", label: "Custom" },
+];
+
+function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="flex rounded-md border border-[#2d2d2d]/70 p-0.5 text-[11px]"
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          role="radio"
+          aria-checked={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={clsx(
+            "cursor-pointer rounded px-2 py-0.5 transition-colors",
+            value === option.value
+              ? "bg-paradise-300/20 text-paradise-200"
+              : "text-paradise-200/60 hover:text-paradise-200",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -77,12 +134,14 @@ function ColorRow({
   value,
   presets,
   onChange,
+  showLabel = true,
 }: {
   id: string;
   label: string;
   value: string | null;
   presets: string[];
   onChange: (color: string | null) => void;
+  showLabel?: boolean;
 }) {
   const current = (value ?? presets[0]).toLowerCase();
   const isCustom = !presets.some((color) => color.toLowerCase() === current);
@@ -90,7 +149,9 @@ function ColorRow({
 
   return (
     <div className="grid gap-1.5">
-      <span className="text-sm text-paradise-100/85">{label}</span>
+      {showLabel ? (
+        <span className="text-sm text-paradise-100/85">{label}</span>
+      ) : null}
       <div className="flex items-center gap-2">
         {presets.map((color, i) => (
           <button
@@ -137,6 +198,29 @@ export default function SettingsPanel() {
   const [open, setOpen] = useState(false);
   const [settings, update] = useAppSettings();
   const rootRef = useRef<HTMLDivElement>(null);
+  const backgroundFile = useBackgroundFile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  // "Custom" without a stored file opens the picker; the mode only switches
+  // once a file has been saved, so cancelling keeps the gradient.
+  const chooseBackgroundMode = (mode: BackgroundMode) => {
+    if (mode === "custom" && !backgroundFile) fileInputRef.current?.click();
+    else update({ backgroundMode: mode });
+  };
+
+  const onFilePicked = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // picking the same file again still fires
+    if (!file) return;
+    setFileError(null);
+    try {
+      await saveBackgroundFile(file);
+      update({ backgroundMode: "custom" });
+    } catch {
+      setFileError("Couldn't store that file. It may be too large.");
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -172,37 +256,57 @@ export default function SettingsPanel() {
               presets={ACCENT_PRESETS}
               onChange={(color) => update({ accentColor: color })}
             />
-            <ColorRow
-              id="background-color"
-              label="Background"
-              value={settings.backgroundColor}
-              presets={BACKGROUND_PRESETS}
-              onChange={(color) => update({ backgroundColor: color })}
-            />
+            <div className="grid gap-1.5">
+              <div className="flex items-center justify-between gap-2 text-sm text-paradise-100/85">
+                Background
+                <Segmented
+                  label="Background type"
+                  value={settings.backgroundMode}
+                  options={BACKGROUND_MODES}
+                  onChange={chooseBackgroundMode}
+                />
+              </div>
+              {settings.backgroundMode === "gradient" ? (
+                <ColorRow
+                  id="background-color"
+                  label="Background"
+                  showLabel={false}
+                  value={settings.backgroundColor}
+                  presets={BACKGROUND_PRESETS}
+                  onChange={(color) => update({ backgroundColor: color })}
+                />
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Choose another image or video"
+                  className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-left text-xs text-paradise-100/85 transition-colors hover:bg-black/30"
+                >
+                  <FaImage className="shrink-0 text-paradise-300" />
+                  <span className="truncate">
+                    {backgroundFile?.name ?? "Choose image or video…"}
+                  </span>
+                </button>
+              )}
+              {fileError ? (
+                <div className="text-[11px] text-paradise-red">{fileError}</div>
+              ) : null}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                aria-label="Background image or video"
+                className="hidden"
+                onChange={onFilePicked}
+              />
+            </div>
             <div className="flex items-center justify-between gap-2 text-sm text-paradise-100/85">
               Bookmarks
-              <div
-                role="radiogroup"
-                aria-label="Bookmark layout"
-                className="flex rounded-md border border-[#2d2d2d]/70 p-0.5 text-[11px]"
-              >
-                {LAYOUT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    role="radio"
-                    aria-checked={settings.bookmarkLayout === option.value}
-                    onClick={() => update({ bookmarkLayout: option.value })}
-                    className={clsx(
-                      "cursor-pointer rounded px-2 py-0.5 transition-colors",
-                      settings.bookmarkLayout === option.value
-                        ? "bg-paradise-300/20 text-paradise-200"
-                        : "text-paradise-200/60 hover:text-paradise-200",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                label="Bookmark layout"
+                value={settings.bookmarkLayout}
+                options={LAYOUT_OPTIONS}
+                onChange={(layout) => update({ bookmarkLayout: layout })}
+              />
             </div>
           </Section>
         </div>
