@@ -9,6 +9,7 @@ import {
   type Follower,
   type FollowerSnapshot,
 } from "@/lib/followerChanges";
+import { useTwitchLinkProps } from "@/components/startpage/settings";
 import { formatDate, matchesQuery } from "./format";
 
 const SNAPSHOT_KEY_PREFIX = "twitch-follower-snapshot:";
@@ -91,15 +92,16 @@ interface FollowersViewProps {
 function UserChip({
   user,
   tone,
+  linkProps,
 }: {
   user: Pick<Follower, "login" | "name">;
   tone: "gained" | "lost";
+  linkProps: ReturnType<typeof useTwitchLinkProps>;
 }) {
   return (
     <a
       href={`https://twitch.tv/${user.login}`}
-      target="_blank"
-      rel="noreferrer"
+      {...linkProps}
       className={
         tone === "gained"
           ? "rounded bg-paradise-green/20 px-1.5 py-0.5 text-paradise-green transition-colors hover:bg-paradise-green/30"
@@ -123,6 +125,7 @@ export default function FollowersView({
   missingPermission,
 }: FollowersViewProps) {
   const [filter, setFilter] = useState<FollowerFilter>("all");
+  const twitchLink = useTwitchLinkProps();
 
   const gainedIds = useMemo(
     () => new Set(changes?.gained.map((follower) => follower.id)),
@@ -177,10 +180,20 @@ export default function FollowersView({
           </div>
           <div className="flex flex-wrap gap-1">
             {changes.gained.map((user) => (
-              <UserChip key={`+${user.id}`} user={user} tone="gained" />
+              <UserChip
+                key={`+${user.id}`}
+                user={user}
+                tone="gained"
+                linkProps={twitchLink}
+              />
             ))}
             {changes.lost.map((user) => (
-              <UserChip key={`-${user.id}`} user={user} tone="lost" />
+              <UserChip
+                key={`-${user.id}`}
+                user={user}
+                tone="lost"
+                linkProps={twitchLink}
+              />
             ))}
           </div>
         </div>
@@ -212,8 +225,7 @@ export default function FollowersView({
             <a
               key={follower.id}
               href={`https://twitch.tv/${follower.login}`}
-              target="_blank"
-              rel="noreferrer"
+              {...twitchLink}
               className="group grid grid-cols-[1fr_auto] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#b8a4ff]/[0.08]"
             >
               <div className="min-w-0">

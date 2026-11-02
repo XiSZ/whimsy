@@ -21,6 +21,7 @@ import {
   matchesQuery,
 } from "@/components/twitch/format";
 import type { Follower } from "@/lib/followerChanges";
+import { useTwitchLinkProps } from "@/components/startpage/settings";
 
 interface FollowedChannel {
   id: string;
@@ -188,6 +189,7 @@ export default function TwitchFollowingPage() {
   const [myUserId, setMyUserId] = useState<string | null>(null);
   // Starred channel ids; they drive the Schedule tab.
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const twitchLink = useTwitchLinkProps();
   const [blockedError, setBlockedError] = useState<string | null>(null);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const [blockName, setBlockName] = useState("");
@@ -877,8 +879,7 @@ export default function TwitchFollowingPage() {
                                   ) : null}
                                   <a
                                     href={`https://twitch.tv/${channel.login}`}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                    {...twitchLink}
                                     title="Open on Twitch"
                                     onClick={(event) => event.stopPropagation()}
                                     className="text-paradise-200/40 transition-colors hover:text-paradise-200"
@@ -1000,8 +1001,7 @@ export default function TwitchFollowingPage() {
                           <a
                             key={channel.id}
                             href={`https://twitch.tv/${channel.login}`}
-                            target="_blank"
-                            rel="noreferrer"
+                            {...twitchLink}
                             className="group grid grid-cols-[1fr_auto] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#b8a4ff]/[0.08]"
                           >
                             <div className="truncate text-xs font-medium text-paradise-100">
@@ -1059,8 +1059,7 @@ export default function TwitchFollowingPage() {
                           >
                             <a
                               href={`https://twitch.tv/${user.login}`}
-                              target="_blank"
-                              rel="noreferrer"
+                              {...twitchLink}
                               className="min-w-0 truncate text-xs font-medium text-paradise-100 hover:text-[#d8cfff]"
                             >
                               {user.name}

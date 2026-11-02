@@ -9,6 +9,7 @@ import {
 } from "react";
 import { FaCog, FaTwitch } from "react-icons/fa";
 import Select from "@/components/ui/Select";
+import { useTwitchLinkProps } from "./settings";
 
 interface TwitchChannel {
   login: string;
@@ -65,6 +66,7 @@ function formatViewerCount(value: number): string {
 }
 
 export default function TwitchWidget() {
+  const twitchLink = useTwitchLinkProps();
   const [channels, setChannels] = useState<TwitchChannel[]>([]);
   const [configured, setConfigured] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -420,8 +422,7 @@ export default function TwitchWidget() {
                 <a
                   key={channel.login}
                   href={`https://twitch.tv/${channel.login}`}
-                  target="_blank"
-                  rel="noreferrer"
+                  {...twitchLink}
                   className="grid grid-cols-[1fr_auto] gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#b8a4ff]/[0.08]"
                 >
                   <div className="min-w-0">

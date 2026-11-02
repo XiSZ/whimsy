@@ -6,6 +6,8 @@ export type BookmarkLayout = "tiles" | "strips";
 
 export interface AppSettings {
   openInNewTab: boolean;
+  // Twitch channel links (widget + /twitch page) open in a new tab.
+  twitchNewTab: boolean;
   // Hex color overriding the default accent; null keeps the built-in palette.
   accentColor: string | null;
   // Hex base for the animated background; null keeps the default navy.
@@ -17,6 +19,7 @@ const SETTINGS_KEY = "whimsy-settings";
 const SETTINGS_EVENT = "whimsy-settings-changed";
 const DEFAULTS: AppSettings = {
   openInNewTab: false,
+  twitchNewTab: true,
   accentColor: null,
   backgroundColor: null,
   bookmarkLayout: "tiles",
@@ -89,4 +92,10 @@ export function useAppSettings(): [
   };
 
   return [settings, update, loaded];
+}
+
+// Spread onto twitch.tv anchors: new tab or same tab per the setting.
+export function useTwitchLinkProps(): { target?: string; rel?: string } {
+  const [settings] = useAppSettings();
+  return settings.twitchNewTab ? { target: "_blank", rel: "noreferrer" } : {};
 }

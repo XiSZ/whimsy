@@ -5,6 +5,7 @@ import {
   upcomingStreams,
   type ChannelSchedule,
 } from "@/lib/twitchSchedule";
+import { useTwitchLinkProps } from "@/components/startpage/settings";
 import { formatDate } from "./format";
 
 interface ScheduleChannel {
@@ -54,6 +55,7 @@ export default function ScheduleView({
     ChannelSchedule | null
   > | null>(null);
   const idsKey = favoriteIds.join(",");
+  const twitchLink = useTwitchLinkProps();
 
   useEffect(() => {
     if (!idsKey) return;
@@ -151,8 +153,7 @@ export default function ScheduleView({
                   <a
                     key={`${stream.channelId}-${stream.start}`}
                     href={`https://twitch.tv/${channel?.login ?? ""}`}
-                    target="_blank"
-                    rel="noreferrer"
+                    {...twitchLink}
                     className="grid grid-cols-[7.5rem_1fr] items-baseline gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#b8a4ff]/[0.08]"
                   >
                     <span className="whitespace-nowrap text-[11px] tabular-nums text-paradise-200/70">
