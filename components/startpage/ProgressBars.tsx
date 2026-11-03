@@ -126,21 +126,21 @@ export default function ProgressBars() {
   }, []);
 
   return (
-    <div className="w-full rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
+    <div className="w-full rounded-xl border border-[#2d2d2d]/70 bg-glass px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="grid gap-1.5">
         {(items ?? EMPTY_ITEMS).map((item) => (
           <div
             key={item.label}
             className="grid grid-cols-[62px_1fr_42px] items-center gap-2"
           >
-            <span className="text-xs text-paradise-200">{item.label}</span>
+            <span className="text-xs text-white">{item.label}</span>
             <div className="h-1.5 rounded-full bg-black/25 overflow-hidden">
               <div
                 className="h-full rounded-full accent-bar transition-[width] duration-500"
                 style={{ width: `${item.value.toFixed(1)}%` }}
               />
             </div>
-            <span className="text-xs tabular-nums text-paradise-200/90 text-right">
+            <span className="text-xs tabular-nums text-white/90 text-right">
               {items && `${Math.round(item.value)}%`}
             </span>
           </div>

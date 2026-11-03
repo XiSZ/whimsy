@@ -281,7 +281,7 @@ export default function SearchBar() {
           autoFocus
           className="
             w-full px-4 py-3 rounded-xl
-            bg-[#161616]/62
+            bg-glass
             border border-[#2d2d2d]/70
             text-paradise-fg
             backdrop-blur-lg backdrop-saturate-150
@@ -322,8 +322,8 @@ export default function SearchBar() {
               className={clsx(
                 "flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm border transition-all duration-300 cursor-pointer",
                 isActive
-                  ? "bg-paradise-300 text-paradise-bg border-paradise-300 font-medium"
-                  : "bg-[#161616]/62 border-[#2d2d2d]/70 text-paradise-100/85 hover:border-paradise-100/30 hover:text-paradise-100 backdrop-blur-lg backdrop-saturate-150",
+                  ? "bg-paradise-300 text-on-accent border-paradise-300 font-medium"
+                  : "bg-glass border-[#2d2d2d]/70 text-paradise-100/85 hover:border-paradise-100/30 hover:text-paradise-100 backdrop-blur-lg backdrop-saturate-150",
               )}
             >
               <Icon className="text-xs" />

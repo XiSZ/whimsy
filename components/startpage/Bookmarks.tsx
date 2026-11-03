@@ -142,11 +142,11 @@ function Favicon({ link }: { link: BookmarkLink }) {
     <img
       src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
       alt=""
-      width={16}
-      height={16}
+      width={24}
+      height={24}
       loading="lazy"
       referrerPolicy="no-referrer"
-      className="h-4 w-4 shrink-0 rounded-sm icon-only:h-6 icon-only:w-6"
+      className="h-6 w-6 shrink-0 rounded-sm"
     />
   );
 }

@@ -41,6 +41,8 @@ export interface AppSettings {
   hiddenWidgets: WidgetKey[];
   // Backdrop blur of the glass panels, in px.
   glassBlur: number;
+  // Background opacity of the glass panels, in percent.
+  glassOpacity: number;
   // Bookmark group colors picked in Settings, by group key (see groupKey in
   // Bookmarks.tsx); groups without one keep their default.
   groupColors: Record<string, string>;
@@ -66,6 +68,7 @@ const DEFAULTS: AppSettings = {
   bookmarkAlignment: "vertical",
   hiddenWidgets: [],
   glassBlur: 16,
+  glassOpacity: 62,
   groupColors: {},
   calendarUrl: "",
   calendarView: "month",
@@ -85,15 +88,26 @@ function readSettings(): AppSettings {
   }
 }
 
+// Text drawn on the accent (today's date, the picked search engine): dark on
+// a light accent, white on a dark one. Same formula as the inline script.
+export function onAccentColor(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  const brightness =
+    0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return brightness > 150 ? "#0a0c16" : "#fff";
+}
+
 // Applies the accent to <html>; mirrored by the inline script in the root
 // layout, which does the same before first paint to avoid a color flash.
 export function applyAccentColor(color: string | null) {
   const root = document.documentElement;
   if (color) {
     root.style.setProperty("--accent", color);
+    root.style.setProperty("--color-on-accent", onAccentColor(color));
     root.dataset.accent = "";
   } else {
     root.style.removeProperty("--accent");
+    root.style.removeProperty("--color-on-accent");
     delete root.dataset.accent;
   }
 }
@@ -119,6 +133,11 @@ export function applyBookmarkAlignment(alignment: BookmarkAlignment) {
 // `--blur-lg` theme variable (mirrored by the same inline script).
 export function applyGlassBlur(px: number) {
   document.documentElement.style.setProperty("--blur-lg", `${px}px`);
+}
+
+// The glass panels' `bg-glass` reads `--glass-alpha` (see globals.css).
+export function applyGlassOpacity(percent: number) {
+  document.documentElement.style.setProperty("--glass-alpha", `${percent}%`);
 }
 
 // Sets `--group-<key>` on <html> for each picked bookmark group color
@@ -167,6 +186,7 @@ export function useAppSettings(): [
     if (patch.bookmarkLinkStyle) applyBookmarkLinkStyle(patch.bookmarkLinkStyle);
     if (patch.bookmarkAlignment) applyBookmarkAlignment(patch.bookmarkAlignment);
     if (patch.glassBlur !== undefined) applyGlassBlur(patch.glassBlur);
+    if (patch.glassOpacity !== undefined) applyGlassOpacity(patch.glassOpacity);
     if (patch.groupColors) applyGroupColors(patch.groupColors);
     window.dispatchEvent(new Event(SETTINGS_EVENT));
   }, []);

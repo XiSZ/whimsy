@@ -7,6 +7,7 @@ import {
   applyBookmarkLayout,
   applyBookmarkLinkStyle,
   applyGlassBlur,
+  applyGlassOpacity,
   applyGroupColors,
   useAppSettings,
 } from "./settings";
@@ -37,6 +38,10 @@ export default function AccentSync() {
   useEffect(() => {
     if (loaded) applyGlassBlur(settings.glassBlur);
   }, [loaded, settings.glassBlur]);
+
+  useEffect(() => {
+    if (loaded) applyGlassOpacity(settings.glassOpacity);
+  }, [loaded, settings.glassOpacity]);
 
   useEffect(() => {
     if (loaded) applyGroupColors(settings.groupColors);

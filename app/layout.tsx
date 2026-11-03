@@ -43,10 +43,10 @@ export default function RootLayout({
     >
       <head>
         {/* Apply the saved accent color, bookmark layout, glass blur and
-            group colors before first paint (see settings.ts). */}
+            opacity, and group colors before first paint (see settings.ts). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var s=JSON.parse(localStorage.getItem("whimsy-settings")||"{}"),r=document.documentElement,c=s.accentColor;if(c){r.style.setProperty("--accent",c);r.dataset.accent=""}if(s.bookmarkLayout)r.dataset.bookmarks=s.bookmarkLayout;if(s.bookmarkLinkStyle)r.dataset.bookmarkLinks=s.bookmarkLinkStyle;if(s.bookmarkAlignment)r.dataset.bookmarkAlign=s.bookmarkAlignment;if(s.glassBlur!=null)r.style.setProperty("--blur-lg",s.glassBlur+"px");var g=s.groupColors||{};for(var k in g)r.style.setProperty("--group-"+k,g[k])}catch(e){}`,
+            __html: `try{var s=JSON.parse(localStorage.getItem("whimsy-settings")||"{}"),r=document.documentElement,c=s.accentColor;if(c){var n=parseInt(c.slice(1),16);r.style.setProperty("--accent",c);r.style.setProperty("--color-on-accent",.299*(n>>16)+.587*(n>>8&255)+.114*(n&255)>150?"#0a0c16":"#fff");r.dataset.accent=""}if(s.glassOpacity!=null)r.style.setProperty("--glass-alpha",s.glassOpacity+"%");if(s.bookmarkLayout)r.dataset.bookmarks=s.bookmarkLayout;if(s.bookmarkLinkStyle)r.dataset.bookmarkLinks=s.bookmarkLinkStyle;if(s.bookmarkAlignment)r.dataset.bookmarkAlign=s.bookmarkAlignment;if(s.glassBlur!=null)r.style.setProperty("--blur-lg",s.glassBlur+"px");var g=s.groupColors||{};for(var k in g)r.style.setProperty("--group-"+k,g[k])}catch(e){}`,
           }}
         />
       </head>

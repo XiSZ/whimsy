@@ -17,6 +17,12 @@
 
   /* Soft accent for the greeting name and clock; follows the user accent */
   --color-highlight: #ffe4bf;
+  /* Readable text tint of the accent, light even for a dark accent */
+  --color-accent-text: color-mix(in oklab, var(--color-paradise-300), white 55%);
+  /* Text on an accent background; settings.ts sets it from the accent */
+  --color-on-accent: #0a0c16;
+  /* Glass panel background; Settings → Glass opacity sets --glass-alpha */
+  --color-glass: color-mix(in oklab, #161616 var(--glass-alpha), transparent);
 
   /* Other colors */
   --color-paradise-fg: #fff0d8;
@@ -32,6 +38,10 @@
 /* --- Base --- */
 html {
   @apply bg-paradise-bg text-paradise-fg -z-50;
+}
+
+:root {
+  --glass-alpha: 62%;
 }
 
 /* --- User accent --- */

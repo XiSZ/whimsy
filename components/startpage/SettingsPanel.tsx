@@ -489,6 +489,21 @@ export default function SettingsPanel() {
                 className="w-28 cursor-pointer accent-paradise-300"
               />
             </label>
+            {/* This panel keeps its own fixed glass so it stays usable at 0. */}
+            <label className="flex items-center justify-between gap-3 text-sm text-paradise-100/85">
+              Glass opacity
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={settings.glassOpacity}
+                onChange={(event) =>
+                  update({ glassOpacity: Number(event.target.value) })
+                }
+                className="w-28 cursor-pointer accent-paradise-300"
+              />
+            </label>
           </Section>
 
           <Section title="Bookmark colors">

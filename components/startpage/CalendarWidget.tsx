@@ -52,6 +52,8 @@ function viewRange(view: CalendarView, cursor: Day): [number, number] {
   return [utc(addDays(first, -1)).getTime(), utc(addDays(next, 1)).getTime()];
 }
 
+// Colors all derive from the accent: `accent-text` is a tint of it that stays
+// readable when the accent is dark, `on-accent` is the text on top of it.
 export default function CalendarWidget() {
   const [settings, update] = useAppSettings();
   const view = settings.calendarView;
@@ -139,30 +141,30 @@ export default function CalendarWidget() {
     setSelected((current) => (current === key ? null : key));
 
   const todayKey = dayKey(now);
+  const currentMonday = dayKey(startOfWeek(now));
   const monday = startOfWeek(cursor);
   const sunday = addDays(monday, 6);
-  const thisWeek = dayKey(startOfWeek(now)) === dayKey(monday);
   const isCurrent =
     view === "week"
-      ? thisWeek
+      ? dayKey(monday) === currentMonday
       : view === "month"
         ? cursor.year === now.year && cursor.month === now.month
         : cursor.year === now.year;
+  // "16–22.11" or, across months, "30.11–6.12".
+  const shortDay = (day: Day) => `${day.day}.${day.month + 1}`;
   const label =
     view === "year"
       ? String(cursor.year)
       : view === "month"
         ? formatDay(cursor, { month: "long", year: "numeric" })
         : `KW ${isoWeek(monday.year, monday.month, monday.day)} · ${
-            monday.month === sunday.month
-              ? monday.day
-              : formatDay(monday, { day: "numeric", month: "short" })
-          }–${formatDay(sunday, { day: "numeric", month: "short" })}`;
+            monday.month === sunday.month ? monday.day : shortDay(monday)
+          }–${shortDay(sunday)}`;
 
   const eventsLabel = (date: Day, count: number) =>
     `${formatDay(date, { weekday: "long", day: "numeric", month: "long" })}, ${count} event${count === 1 ? "" : "s"}`;
 
-  // A day in the month grid: a button with a dot when it has events.
+  // A day in the grid: a button with a dot when it has events.
   const dayCell = (date: Day, column: number) => {
     const key = dayKey(date);
     const list = events?.get(key);
@@ -170,12 +172,12 @@ export default function CalendarWidget() {
     const className = clsx(
       "relative mx-auto flex h-6 w-6 items-center justify-center rounded-full",
       isToday
-        ? "bg-paradise-300 font-semibold text-paradise-bg"
+        ? "bg-paradise-300 font-semibold text-on-accent"
         : column >= 5
-          ? "text-paradise-100/50"
-          : "text-paradise-100/85",
-      list && !isToday && "cursor-pointer transition-colors hover:bg-white/10",
-      list && isToday && "cursor-pointer",
+          ? "text-accent-text/55"
+          : "text-accent-text/90",
+      list && "cursor-pointer",
+      list && !isToday && "transition-colors hover:bg-white/10",
       selected === key && !isToday && "bg-white/15",
     );
     if (!list) {
@@ -198,25 +200,68 @@ export default function CalendarWidget() {
         <span
           className={clsx(
             "absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full",
-            isToday ? "bg-paradise-bg" : "bg-paradise-300",
+            isToday ? "bg-on-accent" : "bg-accent-text",
           )}
         />
       </button>
     );
   };
 
+  // KW column, a separator line, then Monday–Sunday; `rows` are weeks, with
+  // null for the padding days of a month.
+  const grid = (rows: (Day | null)[][]) => (
+    <div className="relative mt-1 grid grid-cols-8 gap-y-0.5 text-center text-[11px] tabular-nums">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-[12.5%] w-px bg-accent-text/15"
+      />
+      <div className="py-0.5 text-accent-text/35">KW</div>
+      {WEEKDAYS.map((weekday) => (
+        <div key={weekday} className="py-0.5 text-accent-text/50">
+          {weekday}
+        </div>
+      ))}
+      {rows.map((row) => {
+        // Every day of a Monday–Sunday row shares one ISO week.
+        const first = row.find((day) => day !== null);
+        const weekMonday = startOfWeek(first);
+        return (
+          <Fragment key={dayKey(weekMonday)}>
+            <button
+              onClick={() => show("week", weekMonday)}
+              title="Show this week"
+              className={clsx(
+                "flex h-6 cursor-pointer items-center justify-center rounded text-[10px] transition-colors hover:text-accent-text",
+                dayKey(weekMonday) === currentMonday
+                  ? "font-semibold text-accent-text"
+                  : "text-accent-text/35",
+              )}
+            >
+              {isoWeek(first.year, first.month, first.day)}
+            </button>
+            {row.map((day, i) =>
+              day === null ? <div key={`blank-${i}`} /> : dayCell(day, i),
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+
   const days = monthDays(cursor.year, cursor.month);
-  const weeks = Array.from({ length: Math.ceil(days.length / 7) }, (_, w) =>
-    days.slice(w * 7, w * 7 + 7),
+  const monthRows = Array.from({ length: Math.ceil(days.length / 7) }, (_, w) =>
+    days
+      .slice(w * 7, w * 7 + 7)
+      .map((day) => (day === null ? null : { ...cursor, day })),
   );
   const selectedEvents = selected ? events?.get(selected) : undefined;
   const arrow =
-    "shrink-0 cursor-pointer p-1 text-[10px] text-paradise-100/50 transition-colors hover:text-paradise-200";
+    "shrink-0 cursor-pointer p-1 text-[10px] text-accent-text/50 transition-colors hover:text-accent-text";
 
   return (
     <div
       ref={rootRef}
-      className="relative w-full rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]"
+      className="relative w-full rounded-xl border border-[#2d2d2d]/70 bg-glass px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]"
     >
       {selected && selectedEvents ? (
         <div
@@ -225,7 +270,7 @@ export default function CalendarWidget() {
           className="absolute inset-x-0 bottom-full z-30 mb-2 rounded-xl border border-[#2d2d2d]/80 bg-[#161616]/95 px-3 py-2 shadow-2xl animate-stagger-in"
         >
           <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] uppercase tracking-wide text-paradise-200/75">
+            <div className="text-[11px] uppercase tracking-wide text-accent-text/80">
               {formatDay(parseDayKey(selected), {
                 weekday: "short",
                 day: "numeric",
@@ -235,7 +280,7 @@ export default function CalendarWidget() {
             <button
               onClick={() => setSelected(null)}
               aria-label="Close"
-              className="cursor-pointer p-1 text-[10px] text-paradise-100/40 transition-colors hover:text-paradise-200"
+              className="cursor-pointer p-1 text-[10px] text-accent-text/40 transition-colors hover:text-accent-text"
             >
               <FaTimes />
             </button>
@@ -243,10 +288,10 @@ export default function CalendarWidget() {
           <ul className="twitch-scroll mt-1 grid max-h-48 gap-1 overflow-y-auto">
             {selectedEvents.map((event, i) => (
               <li key={i} className="flex gap-2 text-xs">
-                <span className="w-12 shrink-0 tabular-nums text-paradise-300">
+                <span className="w-12 shrink-0 tabular-nums text-accent-text">
                   {eventTime(event)}
                 </span>
-                <span className="min-w-0 break-words text-paradise-100/85">
+                <span className="min-w-0 break-words text-accent-text/90">
                   {event.title}
                 </span>
               </li>
@@ -263,7 +308,7 @@ export default function CalendarWidget() {
           onClick={() => show(view, now)}
           disabled={isCurrent}
           title={isCurrent ? undefined : "Back to today"}
-          className="min-w-0 flex-1 truncate text-[11px] uppercase tracking-wide text-paradise-200/75 transition-colors enabled:cursor-pointer enabled:hover:text-paradise-200"
+          className="min-w-0 flex-1 truncate text-[11px] uppercase tracking-wide text-accent-text/80 transition-colors enabled:cursor-pointer enabled:hover:text-accent-text"
         >
           {label}
         </button>
@@ -279,110 +324,10 @@ export default function CalendarWidget() {
         />
       </div>
 
-      {view === "month" ? (
-        <div className="mt-1 grid grid-cols-8 gap-y-0.5 text-center text-[11px] tabular-nums">
-          <div className="py-0.5 text-paradise-100/30">KW</div>
-          {WEEKDAYS.map((weekday) => (
-            <div key={weekday} className="py-0.5 text-paradise-100/40">
-              {weekday}
-            </div>
-          ))}
-          {weeks.map((week, w) => {
-            // Every day of a Monday–Sunday row shares one ISO week.
-            const first = { ...cursor, day: week.find((day) => day !== null) };
-            const weekMonday = startOfWeek(first);
-            return (
-              <Fragment key={w}>
-                <button
-                  onClick={() => show("week", weekMonday)}
-                  title="Show this week"
-                  className={clsx(
-                    "flex h-6 cursor-pointer items-center justify-center rounded text-[10px] transition-colors hover:text-paradise-200",
-                    dayKey(weekMonday) === dayKey(startOfWeek(now))
-                      ? "text-paradise-300"
-                      : "text-paradise-100/30",
-                  )}
-                >
-                  {isoWeek(first.year, first.month, first.day)}
-                </button>
-                {week.map((day, i) =>
-                  day === null ? (
-                    <div key={`blank-${i}`} />
-                  ) : (
-                    dayCell({ ...cursor, day }, i)
-                  ),
-                )}
-              </Fragment>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {view === "week" ? (
-        <ul className="mt-1 grid gap-0.5">
-          {Array.from({ length: 7 }, (_, i) => addDays(monday, i)).map((date, i) => {
-            const key = dayKey(date);
-            const list = events?.get(key);
-            const isToday = key === todayKey;
-            const content = (
-              <>
-                <span
-                  className={clsx(
-                    "w-5 shrink-0 text-[10px]",
-                    i >= 5 ? "text-paradise-100/40" : "text-paradise-100/55",
-                  )}
-                >
-                  {WEEKDAYS[i]}
-                </span>
-                <span
-                  className={clsx(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full tabular-nums",
-                    isToday
-                      ? "bg-paradise-300 font-semibold text-paradise-bg"
-                      : "text-paradise-100/85",
-                  )}
-                >
-                  {date.day}
-                </span>
-                {list ? (
-                  <>
-                    <span className="min-w-0 flex-1 truncate text-paradise-100/85">
-                      <span className="text-paradise-300">{eventTime(list[0])}</span>{" "}
-                      {list[0].title}
-                    </span>
-                    {list.length > 1 ? (
-                      <span className="shrink-0 text-paradise-100/40">
-                        +{list.length - 1}
-                      </span>
-                    ) : null}
-                  </>
-                ) : null}
-              </>
-            );
-            const row = "flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-[11px]";
-            return (
-              <li key={key} aria-current={isToday ? "date" : undefined}>
-                {list ? (
-                  <button
-                    onClick={() => toggle(key)}
-                    aria-expanded={selected === key}
-                    aria-label={eventsLabel(date, list.length)}
-                    className={clsx(
-                      row,
-                      "cursor-pointer transition-colors hover:bg-white/5",
-                      selected === key && "bg-white/10",
-                    )}
-                  >
-                    {content}
-                  </button>
-                ) : (
-                  <div className={row}>{content}</div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      {view === "month" ? grid(monthRows) : null}
+      {view === "week"
+        ? grid([Array.from({ length: 7 }, (_, i) => addDays(monday, i))])
+        : null}
 
       {view === "year" ? (
         <div className="mt-1.5 grid grid-cols-3 gap-1 text-[11px]">
@@ -399,8 +344,8 @@ export default function CalendarWidget() {
                 className={clsx(
                   "relative cursor-pointer rounded-md py-1.5 transition-colors",
                   isNow
-                    ? "bg-paradise-300 font-semibold text-paradise-bg"
-                    : "text-paradise-100/85 hover:bg-white/10",
+                    ? "bg-paradise-300 font-semibold text-on-accent"
+                    : "text-accent-text/90 hover:bg-white/10",
                 )}
               >
                 {formatDay(first, { month: "short" })}
@@ -408,7 +353,7 @@ export default function CalendarWidget() {
                   <span
                     className={clsx(
                       "absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full",
-                      isNow ? "bg-paradise-bg" : "bg-paradise-300",
+                      isNow ? "bg-on-accent" : "bg-accent-text",
                     )}
                   />
                 ) : null}

@@ -661,7 +661,7 @@ export default function TwitchFollowingPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl py-10 animate-page-in">
-      <div className="rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-4 py-3 backdrop-blur-lg backdrop-saturate-150">
+      <div className="rounded-xl border border-[#2d2d2d]/70 bg-glass px-4 py-3 backdrop-blur-lg backdrop-saturate-150">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-[12px] uppercase tracking-wide text-[#b8a4ff]">
             <Link

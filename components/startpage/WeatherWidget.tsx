@@ -329,7 +329,7 @@ export default function WeatherWidget() {
   );
 
   return (
-    <div className="md:fixed md:top-4 md:right-4 md:z-20 w-full md:w-[240px] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
+    <div className="md:fixed md:top-4 md:right-4 md:z-20 w-full md:w-[240px] rounded-xl border border-[#2d2d2d]/70 bg-glass px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] uppercase tracking-wide text-paradise-200/75">
           {place.label}
