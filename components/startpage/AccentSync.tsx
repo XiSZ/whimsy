@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import {
   applyAccentColor,
   applyBookmarkLayout,
+  applyBookmarkLinkStyle,
   applyGlassBlur,
   applyGroupColors,
   useAppSettings,
@@ -23,6 +24,10 @@ export default function AccentSync() {
   useEffect(() => {
     if (loaded) applyBookmarkLayout(settings.bookmarkLayout);
   }, [loaded, settings.bookmarkLayout]);
+
+  useEffect(() => {
+    if (loaded) applyBookmarkLinkStyle(settings.bookmarkLinkStyle);
+  }, [loaded, settings.bookmarkLinkStyle]);
 
   useEffect(() => {
     if (loaded) applyGlassBlur(settings.glassBlur);

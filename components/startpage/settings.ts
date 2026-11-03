@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 export type BookmarkLayout = "tiles" | "strips";
-export type WidgetKey = "twitch" | "weather" | "todo" | "progress";
+export type BookmarkLinkStyle = "full" | "icon";
+export type WidgetKey =
+  | "twitch"
+  | "weather"
+  | "calendar"
+  | "todo"
+  | "progress";
 
 export interface WeatherPlace {
   lat: number;
@@ -26,6 +32,8 @@ export interface AppSettings {
   // when it is cropped to the screen.
   backgroundPosition: string;
   bookmarkLayout: BookmarkLayout;
+  // "icon" shows bookmarks as their site icon only (name as tooltip).
+  bookmarkLinkStyle: BookmarkLinkStyle;
   hiddenWidgets: WidgetKey[];
   // Backdrop blur of the glass panels, in px.
   glassBlur: number;
@@ -47,6 +55,7 @@ const DEFAULTS: AppSettings = {
   backgroundMode: "gradient",
   backgroundPosition: "50% 50%",
   bookmarkLayout: "tiles",
+  bookmarkLinkStyle: "full",
   hiddenWidgets: [],
   glassBlur: 16,
   groupColors: {},
@@ -84,6 +93,11 @@ export function applyAccentColor(color: string | null) {
 // script as the accent).
 export function applyBookmarkLayout(layout: BookmarkLayout) {
   document.documentElement.dataset.bookmarks = layout;
+}
+
+// Same idea for `data-bookmark-links` (the `icon-only:` variant).
+export function applyBookmarkLinkStyle(style: BookmarkLinkStyle) {
+  document.documentElement.dataset.bookmarkLinks = style;
 }
 
 // Every glass panel uses Tailwind's `backdrop-blur-lg`, which reads the
@@ -135,6 +149,7 @@ export function useAppSettings(): [
     }
     if (patch.accentColor !== undefined) applyAccentColor(patch.accentColor);
     if (patch.bookmarkLayout) applyBookmarkLayout(patch.bookmarkLayout);
+    if (patch.bookmarkLinkStyle) applyBookmarkLinkStyle(patch.bookmarkLinkStyle);
     if (patch.glassBlur !== undefined) applyGlassBlur(patch.glassBlur);
     if (patch.groupColors) applyGroupColors(patch.groupColors);
     window.dispatchEvent(new Event(SETTINGS_EVENT));

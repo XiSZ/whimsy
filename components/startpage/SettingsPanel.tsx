@@ -21,6 +21,7 @@ import {
   useAppSettings,
   type AppSettings,
   type BookmarkLayout,
+  type BookmarkLinkStyle,
   type WidgetKey,
 } from "./settings";
 import { locatePlace } from "./WeatherWidget";
@@ -44,6 +45,11 @@ const LAYOUT_OPTIONS: { value: BookmarkLayout; label: string }[] = [
   { value: "strips", label: "Strips" },
 ];
 
+const LINK_STYLE_OPTIONS: { value: BookmarkLinkStyle; label: string }[] = [
+  { value: "full", label: "Icon + text" },
+  { value: "icon", label: "Icon" },
+];
+
 type BackgroundMode = AppSettings["backgroundMode"];
 const BACKGROUND_MODES: { value: BackgroundMode; label: string }[] = [
   { value: "gradient", label: "Gradient" },
@@ -53,6 +59,7 @@ const BACKGROUND_MODES: { value: BackgroundMode; label: string }[] = [
 const WIDGETS: { key: WidgetKey; label: string }[] = [
   { key: "twitch", label: "Twitch" },
   { key: "weather", label: "Weather" },
+  { key: "calendar", label: "Calendar" },
   { key: "todo", label: "To-do" },
   { key: "progress", label: "Progress bars" },
 ];
@@ -423,6 +430,15 @@ export default function SettingsPanel() {
                 value={settings.bookmarkLayout}
                 options={LAYOUT_OPTIONS}
                 onChange={(layout) => update({ bookmarkLayout: layout })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 text-sm text-paradise-100/85">
+              Links
+              <Segmented
+                label="Bookmark links"
+                value={settings.bookmarkLinkStyle}
+                options={LINK_STYLE_OPTIONS}
+                onChange={(style) => update({ bookmarkLinkStyle: style })}
               />
             </div>
             <label className="flex items-center justify-between gap-3 text-sm text-paradise-100/85">

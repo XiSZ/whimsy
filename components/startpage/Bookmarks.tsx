@@ -5,6 +5,7 @@ import clsx from "clsx";
 import Card from "@/components/ui/Card";
 import { FaAngleRight } from "react-icons/fa";
 import { SEARCH_QUERY_EVENT } from "./SearchBar";
+import { useAppSettings } from "./settings";
 
 interface BookmarkLink {
   label: string;
@@ -139,13 +140,13 @@ function Favicon({ link }: { link: BookmarkLink }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`https://www.google.com/s2/favicons?sz=32&domain=${domain}`}
+      src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
       alt=""
       width={16}
       height={16}
       loading="lazy"
       referrerPolicy="no-referrer"
-      className="h-4 w-4 shrink-0 rounded-sm"
+      className="h-4 w-4 shrink-0 rounded-sm icon-only:h-6 icon-only:w-6"
     />
   );
 }
@@ -166,8 +167,14 @@ function groupStyle(category: BookmarkCategory, index: number): CSSProperties {
 // Both layouts are rendered and the inactive one is hidden via the `strips:`
 // variant (driven by `data-bookmarks` on <html>), so the saved choice shows
 // on first paint without a layout jump after hydration.
+// Icon-only links (Settings → Links) are styled via the `icon-only:` variant,
+// so the saved choice applies before hydration; the names stay in the DOM for
+// screen readers and become tooltips.
 export default function Bookmarks() {
   const [query, setQuery] = useState("");
+  const [settings] = useAppSettings();
+  const tooltip = (link: BookmarkLink) =>
+    settings.bookmarkLinkStyle === "icon" ? link.label : undefined;
 
   useEffect(() => {
     const onQuery = (event: Event) =>
@@ -195,37 +202,38 @@ export default function Bookmarks() {
         {categories.map((category, i) => (
           <Card
             key={category.title}
-            className="animate-stagger-in min-h-[160px] md:min-h-[180px]"
+            className="animate-stagger-in min-h-[160px] md:min-h-[180px] icon-only:min-h-0!"
             style={groupStyle(category, i)}
           >
             <div className="text-lg text-(--group) mb-1 text-center md:text-left">
               {category.title}
             </div>
 
-            <div className="flex flex-col gap-2 items-center md:items-start">
+            <div className="flex flex-col gap-2 items-center md:items-start justify-center md:justify-start icon-only:flex-row icon-only:flex-wrap icon-only:gap-4 icon-only:pt-1">
               {category.links.map((link) => (
                 <a
                   key={link.url}
                   href={link.url}
+                  title={tooltip(link)}
                   className={clsx(
                     "group relative flex items-center justify-center md:justify-start text-sm py-0.5 transition-[opacity,transform] duration-200 transform",
                     dim(link) && "opacity-30",
                   )}
                 >
-                  <span className="hidden md:block absolute -left-1 opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0 transition-all duration-200 text-(--group) animate-page-in">
+                  <span className="hidden md:block absolute -left-1 opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0 transition-all duration-200 text-(--group) animate-page-in icon-only:hidden!">
                     <FaAngleRight className="w-3 h-3" />
                   </span>
 
                   <span
                     className={clsx(
-                      "flex items-center gap-2 transition-colors transition-transform duration-200 transform group-hover:text-paradise-200 md:group-hover:translate-x-3",
+                      "flex items-center gap-2 transition-colors transition-transform duration-200 transform group-hover:text-paradise-200 md:group-hover:translate-x-3 icon-only:translate-x-0! icon-only:group-hover:scale-125",
                       hit(link)
                         ? "font-medium text-(--group)"
                         : "text-paradise-100/85",
                     )}
                   >
                     <Favicon link={link} />
-                    {link.label}
+                    <span className="icon-only:sr-only">{link.label}</span>
                   </span>
                 </a>
               ))}
@@ -251,8 +259,9 @@ export default function Bookmarks() {
               <a
                 key={link.url}
                 href={link.url}
+                title={tooltip(link)}
                 className={clsx(
-                  "flex items-center gap-1.5 whitespace-nowrap text-sm transition-[color,opacity] duration-200 hover:text-paradise-200 hover:underline decoration-(--group)/60 underline-offset-4",
+                  "flex items-center gap-1.5 whitespace-nowrap text-sm transition-[color,opacity,scale] duration-200 hover:text-paradise-200 hover:underline decoration-(--group)/60 underline-offset-4 icon-only:w-fit icon-only:hover:scale-125",
                   hit(link)
                     ? "font-medium text-(--group)"
                     : "text-paradise-100/85",
@@ -260,7 +269,7 @@ export default function Bookmarks() {
                 )}
               >
                 <Favicon link={link} />
-                {link.label}
+                <span className="icon-only:sr-only">{link.label}</span>
               </a>
             ))}
           </Card>

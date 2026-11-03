@@ -5,6 +5,7 @@ import ProgressBars from "@/components/startpage/ProgressBars";
 import WeatherWidget from "@/components/startpage/WeatherWidget";
 import TwitchWidget from "@/components/startpage/TwitchWidget";
 import TodoWidget from "@/components/startpage/TodoWidget";
+import CalendarWidget from "@/components/startpage/CalendarWidget";
 import SettingsPanel from "@/components/startpage/SettingsPanel";
 import { ShowWidget } from "@/components/startpage/settings";
 import CurrentTime from "@/components/time/CurrentTime";
@@ -41,10 +42,16 @@ export default function Page() {
           <ProgressBars />
         </ShowWidget>
       </div>
-      {/* Bottom-right on desktop; after the column on phones. */}
-      <ShowWidget name="todo">
-        <TodoWidget />
-      </ShowWidget>
+      {/* Stacked bottom-right on desktop (so they never overlap); after the
+          column on phones. */}
+      <div className="flex w-full flex-col gap-4 md:fixed md:bottom-4 md:right-4 md:z-20 md:w-[240px]">
+        <ShowWidget name="calendar">
+          <CalendarWidget />
+        </ShowWidget>
+        <ShowWidget name="todo">
+          <TodoWidget />
+        </ShowWidget>
+      </div>
     </>
   );
 }

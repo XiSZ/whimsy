@@ -59,6 +59,8 @@ html {
 /* Settings → Bookmarks sets `data-bookmarks` on <html>; `strips:` styles
    apply in the strip layout, everything else is the tile default. */
 @custom-variant strips (&:where([data-bookmarks="strips"] *));
+/* Settings → Links: `icon-only:` styles apply when bookmarks show icons only. */
+@custom-variant icon-only (&:where([data-bookmark-links="icon"] *));
 
 /* --- Keyframes --- */
 @keyframes fadeIn {
