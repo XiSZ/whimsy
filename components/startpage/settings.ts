@@ -29,6 +29,9 @@ export interface AppSettings {
   hiddenWidgets: WidgetKey[];
   // Backdrop blur of the glass panels, in px.
   glassBlur: number;
+  // Bookmark group colors picked in Settings, by group key (see groupKey in
+  // Bookmarks.tsx); groups without one keep their default.
+  groupColors: Record<string, string>;
   // Last place found for "Weather at my location"; null uses the configured
   // city (NEXT_PUBLIC_WEATHER_*).
   weatherPlace: WeatherPlace | null;
@@ -46,6 +49,7 @@ const DEFAULTS: AppSettings = {
   bookmarkLayout: "tiles",
   hiddenWidgets: [],
   glassBlur: 16,
+  groupColors: {},
   weatherPlace: null,
 };
 
@@ -88,6 +92,18 @@ export function applyGlassBlur(px: number) {
   document.documentElement.style.setProperty("--blur-lg", `${px}px`);
 }
 
+// Sets `--group-<key>` on <html> for each picked bookmark group color
+// (mirrored by the same inline script); cards fall back to their default.
+export function applyGroupColors(colors: Record<string, string>) {
+  const style = document.documentElement.style;
+  for (const name of [...style]) {
+    if (name.startsWith("--group-")) style.removeProperty(name);
+  }
+  for (const [key, color] of Object.entries(colors)) {
+    style.setProperty(`--group-${key}`, color);
+  }
+}
+
 // localStorage-backed settings shared across components; a window event
 // keeps every subscriber in sync within the same tab. `loaded` turns true once
 // the stored values have been read (the first render always sees DEFAULTS).
@@ -120,6 +136,7 @@ export function useAppSettings(): [
     if (patch.accentColor !== undefined) applyAccentColor(patch.accentColor);
     if (patch.bookmarkLayout) applyBookmarkLayout(patch.bookmarkLayout);
     if (patch.glassBlur !== undefined) applyGlassBlur(patch.glassBlur);
+    if (patch.groupColors) applyGroupColors(patch.groupColors);
     window.dispatchEvent(new Event(SETTINGS_EVENT));
   }, []);
 

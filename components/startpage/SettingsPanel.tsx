@@ -24,6 +24,7 @@ import {
   type WidgetKey,
 } from "./settings";
 import { locatePlace } from "./WeatherWidget";
+import { categories, groupKey } from "./Bookmarks";
 
 // Shown while no custom accent is set (the progress-bar orange).
 const DEFAULT_ACCENT = "#ff9b3f";
@@ -438,6 +439,50 @@ export default function SettingsPanel() {
                 className="w-28 cursor-pointer accent-paradise-300"
               />
             </label>
+          </Section>
+
+          <Section title="Bookmark colors">
+            <div className="grid grid-cols-[repeat(3,auto)] justify-between gap-x-2 gap-y-1.5">
+              {categories.map(({ title, color }) => {
+                const key = groupKey(title);
+                const value = settings.groupColors[key] ?? color;
+                return (
+                  <label
+                    key={key}
+                    className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs text-paradise-100/85"
+                  >
+                    <span
+                      style={{ backgroundColor: value }}
+                      className="relative h-4 w-4 shrink-0 rounded-full border border-white/15 transition-transform hover:scale-110"
+                    >
+                      <input
+                        type="color"
+                        aria-label={`${title} color`}
+                        value={value}
+                        onChange={(event) =>
+                          update({
+                            groupColors: {
+                              ...settings.groupColors,
+                              [key]: event.target.value,
+                            },
+                          })
+                        }
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </span>
+                    <span className="truncate">{title}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {Object.keys(settings.groupColors).length > 0 ? (
+              <button
+                onClick={() => update({ groupColors: {} })}
+                className="cursor-pointer justify-self-start text-[11px] text-paradise-200/60 transition-colors hover:text-paradise-200"
+              >
+                Reset to defaults
+              </button>
+            ) : null}
           </Section>
 
           <Section title="Widgets">

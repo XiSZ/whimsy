@@ -16,12 +16,17 @@ interface BookmarkLink {
 
 interface BookmarkCategory {
   title: string;
-  // Title, hover arrow and card border color.
+  // Default title, hover arrow and card border color; Settings → Bookmark
+  // colors can override it.
   color: string;
   links: BookmarkLink[];
 }
 
-const categories: BookmarkCategory[] = [
+// Identifies a group in the `--group-<key>` override variables.
+export const groupKey = (title: string) =>
+  title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+export const categories: BookmarkCategory[] = [
   {
     title: "Social",
     color: "#f472b6",
@@ -145,11 +150,13 @@ function Favicon({ link }: { link: BookmarkLink }) {
   );
 }
 
-// Exposes the category color as `--group` and tints the card border with it.
-function groupStyle(color: string, index: number): CSSProperties {
+// Exposes the group color as `--group` (a color picked in Settings, set on
+// <html> as `--group-<key>`, wins over the default) and tints the card border
+// with it.
+function groupStyle(category: BookmarkCategory, index: number): CSSProperties {
   return {
-    "--group": color,
-    borderColor: `color-mix(in oklab, ${color} 35%, transparent)`,
+    "--group": `var(--group-${groupKey(category.title)}, ${category.color})`,
+    borderColor: "color-mix(in oklab, var(--group) 35%, transparent)",
     animationDelay: `${index * STAGGER_MS}ms`,
   } as CSSProperties;
 }
@@ -189,7 +196,7 @@ export default function Bookmarks() {
           <Card
             key={category.title}
             className="animate-stagger-in min-h-[160px] md:min-h-[180px]"
-            style={groupStyle(category.color, i)}
+            style={groupStyle(category, i)}
           >
             <div className="text-lg text-(--group) mb-1 text-center md:text-left">
               {category.title}
@@ -235,7 +242,7 @@ export default function Bookmarks() {
           <Card
             key={category.title}
             className="animate-stagger-in col-span-5 grid! grid-cols-subgrid items-center px-4 py-2.5"
-            style={groupStyle(category.color, i)}
+            style={groupStyle(category, i)}
           >
             <div className="whitespace-nowrap pr-2 text-[11px] uppercase tracking-wide text-(--group)">
               {category.title}
