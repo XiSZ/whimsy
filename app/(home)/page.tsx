@@ -4,14 +4,20 @@ import Bookmarks from "@/components/startpage/Bookmarks";
 import ProgressBars from "@/components/startpage/ProgressBars";
 import WeatherWidget from "@/components/startpage/WeatherWidget";
 import TwitchWidget from "@/components/startpage/TwitchWidget";
+import TodoWidget from "@/components/startpage/TodoWidget";
 import SettingsPanel from "@/components/startpage/SettingsPanel";
+import { ShowWidget } from "@/components/startpage/settings";
 import CurrentTime from "@/components/time/CurrentTime";
 
 export default function Page() {
   return (
     <>
-      <TwitchWidget />
-      <WeatherWidget />
+      <ShowWidget name="twitch">
+        <TwitchWidget />
+      </ShowWidget>
+      <ShowWidget name="weather">
+        <WeatherWidget />
+      </ShowWidget>
       <SettingsPanel />
       {/* Fixed column width so search, bookmarks and progress line up
           regardless of which content happens to be widest. */}
@@ -31,8 +37,14 @@ export default function Page() {
           <Bookmarks />
         </div>
 
-        <ProgressBars />
+        <ShowWidget name="progress">
+          <ProgressBars />
+        </ShowWidget>
       </div>
+      {/* Bottom-right on desktop; after the column on phones. */}
+      <ShowWidget name="todo">
+        <TodoWidget />
+      </ShowWidget>
     </>
   );
 }

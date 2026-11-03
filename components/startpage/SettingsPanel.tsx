@@ -5,6 +5,8 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { FaCog, FaImage } from "react-icons/fa";
@@ -13,12 +15,15 @@ import { DEFAULT_BACKGROUND } from "@/components/background/useGrainient";
 import {
   saveBackgroundFile,
   useBackgroundFile,
+  useObjectUrl,
 } from "@/components/background/backgroundFile";
 import {
   useAppSettings,
   type AppSettings,
   type BookmarkLayout,
+  type WidgetKey,
 } from "./settings";
+import { locatePlace } from "./WeatherWidget";
 
 // Shown while no custom accent is set (the progress-bar orange).
 const DEFAULT_ACCENT = "#ff9b3f";
@@ -43,6 +48,22 @@ const BACKGROUND_MODES: { value: BackgroundMode; label: string }[] = [
   { value: "gradient", label: "Gradient" },
   { value: "custom", label: "Custom" },
 ];
+
+const WIDGETS: { key: WidgetKey; label: string }[] = [
+  { key: "twitch", label: "Twitch" },
+  { key: "weather", label: "Weather" },
+  { key: "todo", label: "To-do" },
+  { key: "progress", label: "Progress bars" },
+];
+
+const DEFAULT_FOCUS = "50% 50%";
+const FOCUS_STEPS: Record<string, [number, number]> = {
+  ArrowLeft: [-5, 0],
+  ArrowRight: [5, 0],
+  ArrowUp: [0, -5],
+  ArrowDown: [0, 5],
+};
+const clampPercent = (n: number) => Math.round(Math.min(100, Math.max(0, n)));
 
 function Segmented<T extends string>({
   label,
@@ -194,13 +215,90 @@ function ColorRow({
   );
 }
 
+// Thumbnail of the custom background: clicking or dragging on it (or the
+// arrow keys) sets the point that stays in view when it is cropped.
+function FocusPicker({
+  file,
+  value,
+  onChange,
+}: {
+  file: File;
+  value: string;
+  onChange: (position: string) => void;
+}) {
+  const url = useObjectUrl(file);
+  const [x, y] = value.split(" ").map(parseFloat);
+  const set = (nextX: number, nextY: number) =>
+    onChange(`${clampPercent(nextX)}% ${clampPercent(nextY)}%`);
+
+  const pick = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    set(
+      ((event.clientX - box.left) / box.width) * 100,
+      ((event.clientY - box.top) / box.height) * 100,
+    );
+  };
+
+  const nudge = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step = FOCUS_STEPS[event.key];
+    if (!step) return;
+    event.preventDefault();
+    set(x + step[0], y + step[1]);
+  };
+
+  if (!url) return null;
+  const media = "pointer-events-none block max-h-32 max-w-full select-none";
+  return (
+    <div
+      role="group"
+      tabIndex={0}
+      title="Click or drag to choose the part that stays visible"
+      aria-label={`Background focus point: ${x}% from left, ${y}% from top. Arrow keys move it.`}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        pick(event);
+      }}
+      onPointerMove={(event) => {
+        if (event.buttons) pick(event);
+      }}
+      onKeyDown={nudge}
+      className="relative mx-auto w-fit max-w-full cursor-crosshair touch-none overflow-hidden rounded-md border border-[#2d2d2d]/80 outline-none focus-visible:ring-2 focus-visible:ring-paradise-300"
+    >
+      {file.type.startsWith("video/") ? (
+        <video src={url} muted playsInline preload="metadata" className={media} />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className={media} />
+      )}
+      <span
+        className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-paradise-300 shadow"
+        style={{ left: `${x}%`, top: `${y}%` }}
+      />
+    </div>
+  );
+}
+
 export default function SettingsPanel() {
   const [open, setOpen] = useState(false);
   const [settings, update] = useAppSettings();
   const rootRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const backgroundFile = useBackgroundFile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  // Turning it on asks for the location right away (the browser prompts on
+  // this click); the switch only flips once a place was found.
+  const toggleWeatherLocation = async (on: boolean) => {
+    setLocationError(null);
+    if (!on) return update({ weatherPlace: null });
+    try {
+      update({ weatherPlace: await locatePlace() });
+    } catch {
+      setLocationError("Couldn't get your location. Check the site permission.");
+    }
+  };
 
   // "Custom" without a stored file opens the picker; the mode only switches
   // once a file has been saved, so cancelling keeps the gradient.
@@ -216,7 +314,7 @@ export default function SettingsPanel() {
     setFileError(null);
     try {
       await saveBackgroundFile(file);
-      update({ backgroundMode: "custom" });
+      update({ backgroundMode: "custom", backgroundPosition: DEFAULT_FOCUS });
     } catch {
       setFileError("Couldn't store that file. It may be too large.");
     }
@@ -227,14 +325,23 @@ export default function SettingsPanel() {
     const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      toggleRef.current?.focus();
+    };
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open]);
 
   return (
     <div ref={rootRef} className="fixed bottom-4 left-4 z-20">
       {open && (
-        <div className="mb-2 grid w-64 gap-2.5 rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3.5 py-3 shadow-2xl backdrop-blur-lg backdrop-saturate-150 animate-stagger-in">
+        <div className="twitch-scroll mb-2 grid max-h-[calc(100vh-5rem)] w-64 gap-2.5 overflow-y-auto rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3.5 py-3 shadow-2xl backdrop-blur-lg backdrop-saturate-150 animate-stagger-in">
           <Section title="Open in new tab">
             <SwitchRow
               label="Search results"
@@ -287,6 +394,15 @@ export default function SettingsPanel() {
                   </span>
                 </button>
               )}
+              {settings.backgroundMode === "custom" && backgroundFile ? (
+                <FocusPicker
+                  file={backgroundFile}
+                  value={settings.backgroundPosition}
+                  onChange={(position) =>
+                    update({ backgroundPosition: position })
+                  }
+                />
+              ) : null}
               {fileError ? (
                 <div className="text-[11px] text-paradise-red">{fileError}</div>
               ) : null}
@@ -308,11 +424,51 @@ export default function SettingsPanel() {
                 onChange={(layout) => update({ bookmarkLayout: layout })}
               />
             </div>
+            <label className="flex items-center justify-between gap-3 text-sm text-paradise-100/85">
+              Glass blur
+              <input
+                type="range"
+                min={0}
+                max={32}
+                step={2}
+                value={settings.glassBlur}
+                onChange={(event) =>
+                  update({ glassBlur: Number(event.target.value) })
+                }
+                className="w-28 cursor-pointer accent-paradise-300"
+              />
+            </label>
+          </Section>
+
+          <Section title="Widgets">
+            {WIDGETS.map(({ key, label }) => (
+              <SwitchRow
+                key={key}
+                label={label}
+                checked={!settings.hiddenWidgets.includes(key)}
+                onChange={(checked) =>
+                  update({
+                    hiddenWidgets: checked
+                      ? settings.hiddenWidgets.filter((hidden) => hidden !== key)
+                      : [...settings.hiddenWidgets, key],
+                  })
+                }
+              />
+            ))}
+            <SwitchRow
+              label="Weather at my location"
+              checked={settings.weatherPlace !== null}
+              onChange={toggleWeatherLocation}
+            />
+            {locationError ? (
+              <div className="text-[11px] text-paradise-red">{locationError}</div>
+            ) : null}
           </Section>
         </div>
       )}
 
       <button
+        ref={toggleRef}
         onClick={() => setOpen((prev) => !prev)}
         title="Settings"
         aria-label="Settings"

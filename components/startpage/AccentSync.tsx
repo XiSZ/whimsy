@@ -4,12 +4,14 @@ import { useEffect } from "react";
 import {
   applyAccentColor,
   applyBookmarkLayout,
+  applyGlassBlur,
   useAppSettings,
 } from "./settings";
 
-// Re-applies the saved accent (and bookmark layout) once React owns the page. The inline script in
-// the root layout sets it before first paint, but if hydration ever fails
-// React re-renders <html> from scratch and drops those attributes.
+// Re-applies the saved accent (plus bookmark layout and glass blur) once React
+// owns the page. The inline script in the root layout sets them before first
+// paint, but if hydration ever fails React re-renders <html> from scratch and
+// drops those attributes.
 export default function AccentSync() {
   const [settings, , loaded] = useAppSettings();
 
@@ -20,6 +22,10 @@ export default function AccentSync() {
   useEffect(() => {
     if (loaded) applyBookmarkLayout(settings.bookmarkLayout);
   }, [loaded, settings.bookmarkLayout]);
+
+  useEffect(() => {
+    if (loaded) applyGlassBlur(settings.glassBlur);
+  }, [loaded, settings.glassBlur]);
 
   return null;
 }

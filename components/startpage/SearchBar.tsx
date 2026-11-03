@@ -90,6 +90,10 @@ const URL_LIKE = /^[\w-]+(\.[\w-]+)*\.[a-z]{2,}(\/\S*)?$/i;
 
 type EngineKey = (typeof engines)[number]["key"];
 
+// Fired with the current text on every keystroke; Bookmarks highlights
+// matching links from it.
+export const SEARCH_QUERY_EVENT = "whimsy-search-query";
+
 const placeholders: Record<EngineKey, string[]> = {
   google: [
     "Where to buy pipebombs near me?",
@@ -267,7 +271,12 @@ export default function SearchBar() {
         <input
           type="text"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value);
+            window.dispatchEvent(
+              new CustomEvent(SEARCH_QUERY_EVENT, { detail: e.target.value }),
+            );
+          }}
           onKeyDown={handleKeyDown}
           autoFocus
           className="

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useAppSettings } from "@/components/startpage/settings";
-import { useBackgroundFile } from "./backgroundFile";
+import { useBackgroundFile, useObjectUrl } from "./backgroundFile";
 
 const GrainientComponent = dynamic(() => import("./Grainient"), {
   ssr: false,
@@ -23,25 +23,24 @@ function shade(hex: string, factor: number): string {
 }
 
 // The user's own wallpaper: an image, or a muted looping video (paused on its
-// first frame under reduced motion).
-function CustomBackground({ file }: { file: File }) {
-  const [url, setUrl] = useState<string | null>(null);
+// first frame under reduced motion), cropped around `position`.
+function CustomBackground({ file, position }: { file: File; position: string }) {
+  const url = useObjectUrl(file);
   const [still, setStill] = useState(false);
 
   useEffect(() => {
-    const objectUrl = URL.createObjectURL(file);
-    setUrl(objectUrl);
     setStill(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
+  }, []);
 
   if (!url) return null;
   const className = "fixed inset-0 -z-20 h-full w-full object-cover";
+  const style = { objectPosition: position };
   return file.type.startsWith("video/") ? (
     <video
       key={url}
       src={url}
       className={className}
+      style={style}
       autoPlay={!still}
       muted
       loop
@@ -49,7 +48,7 @@ function CustomBackground({ file }: { file: File }) {
     />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" className={className} />
+    <img src={url} alt="" className={className} style={style} />
   );
 }
 
@@ -57,7 +56,9 @@ export default function GrainientLoader() {
   const [settings] = useAppSettings();
   const file = useBackgroundFile();
   if (settings.backgroundMode === "custom" && file) {
-    return <CustomBackground file={file} />;
+    return (
+      <CustomBackground file={file} position={settings.backgroundPosition} />
+    );
   }
 
   const base = settings.backgroundColor;
