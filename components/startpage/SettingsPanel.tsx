@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { FaCog, FaImage } from "react-icons/fa";
+import { FaCog, FaImage, FaTimes } from "react-icons/fa";
 import clsx from "clsx";
 import { DEFAULT_BACKGROUND } from "@/components/background/useGrainient";
 import {
@@ -18,8 +18,10 @@ import {
   useObjectUrl,
 } from "@/components/background/backgroundFile";
 import {
+  MAX_CALENDARS,
   useAppSettings,
   type AppSettings,
+  type CalendarFeed,
   type BookmarkAlignment,
   type BookmarkLayout,
   type BookmarkLinkStyle,
@@ -79,6 +81,12 @@ const FOCUS_STEPS: Record<string, [number, number]> = {
   ArrowDown: [0, 5],
 };
 const clampPercent = (n: number) => Math.round(Math.min(100, Math.max(0, n)));
+
+const FIELD =
+  "w-full min-w-0 rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-100 outline-none transition-colors placeholder:text-paradise-100/35 focus:border-paradise-300/60";
+const blurOnEnter = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+  if (event.key === "Enter") event.currentTarget.blur();
+};
 
 function Segmented<T extends string>({
   label,
@@ -302,18 +310,55 @@ export default function SettingsPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [calendarUrlError, setCalendarUrlError] = useState<string | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const newCalendarNameRef = useRef<HTMLInputElement>(null);
+  const newCalendarUrlRef = useRef<HTMLInputElement>(null);
 
-  // Saved on blur/Enter, not per keystroke, so the feed isn't fetched for
-  // every partial link; an empty field turns the events off.
-  const saveCalendarUrl = (value: string) => {
+  // Links are saved on blur/Enter, not per keystroke, so no half-typed link
+  // gets fetched; clearing a calendar's link removes it.
+  const checkCalendarUrl = (value: string, index: number): string | null => {
     const url = value.trim();
-    if (url && !isGoogleIcsUrl(url)) {
-      setCalendarUrlError("That isn't a Google Calendar iCal link.");
-      return;
+    const error = !isGoogleIcsUrl(url)
+      ? "That isn't a Google Calendar iCal link."
+      : settings.calendars.some((calendar, i) => i !== index && calendar.url === url)
+        ? "That calendar is already added."
+        : null;
+    setCalendarError(error);
+    return error ? null : url;
+  };
+
+  const removeCalendar = (index: number) => {
+    setCalendarError(null);
+    update({ calendars: settings.calendars.filter((_, i) => i !== index) });
+  };
+
+  const editCalendar = (index: number, patch: Partial<CalendarFeed>) => {
+    const current = settings.calendars[index];
+    const next = { ...current };
+    if (patch.name !== undefined) next.name = patch.name.trim() || current.name;
+    if (patch.url !== undefined) {
+      if (!patch.url.trim()) return removeCalendar(index);
+      const url = checkCalendarUrl(patch.url, index);
+      if (!url) return;
+      next.url = url;
     }
-    setCalendarUrlError(null);
-    if (url !== settings.calendarUrl) update({ calendarUrl: url });
+    if (next.name === current.name && next.url === current.url) return;
+    update({
+      calendars: settings.calendars.map((calendar, i) =>
+        i === index ? next : calendar,
+      ),
+    });
+  };
+
+  const addCalendar = () => {
+    const value = newCalendarUrlRef.current?.value ?? "";
+    if (!value.trim()) return;
+    const url = checkCalendarUrl(value, -1);
+    if (!url) return;
+    const name =
+      newCalendarNameRef.current?.value.trim() ||
+      `Calendar ${settings.calendars.length + 1}`;
+    update({ calendars: [...settings.calendars, { name, url }] });
   };
 
   // Turning it on asks for the location right away (the browser prompts on
@@ -507,7 +552,7 @@ export default function SettingsPanel() {
           </Section>
 
           <Section title="Bookmark colors">
-            <div className="grid grid-cols-[repeat(3,auto)] justify-between gap-x-2 gap-y-1.5">
+            <div className="grid grid-cols-[repeat(3,auto)] justify-between gap-x-1 gap-y-1.5">
               {categories.map(({ title, color }) => {
                 const key = groupKey(title);
                 const value = settings.groupColors[key] ?? color;
@@ -573,29 +618,65 @@ export default function SettingsPanel() {
             {locationError ? (
               <div className="text-[11px] text-paradise-red">{locationError}</div>
             ) : null}
-            <label className="grid gap-1 text-sm text-paradise-100/85">
-              Google Calendar
-              <input
-                key={settings.calendarUrl}
-                type="url"
-                defaultValue={settings.calendarUrl}
-                placeholder="Secret address in iCal format"
-                spellCheck={false}
-                onBlur={(event) => saveCalendarUrl(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") event.currentTarget.blur();
-                }}
-                className="w-full rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-100 outline-none transition-colors placeholder:text-paradise-100/35 focus:border-paradise-300/60"
-              />
-            </label>
-            <p className="text-[10px] leading-snug text-paradise-100/40">
-              Google Calendar → your calendar&apos;s settings → Integrate calendar →
-              Secret address in iCal format. Kept in this browser only.
-            </p>
-            {calendarUrlError ? (
-              <div className="text-[11px] text-paradise-red">
-                {calendarUrlError}
+          </Section>
+
+          <Section title="Calendars">
+            {settings.calendars.map((calendar, i) => (
+              <div key={`${i}:${calendar.url}`} className="grid grid-cols-[1fr_auto] gap-1">
+                <input
+                  defaultValue={calendar.name}
+                  aria-label={`Calendar ${i + 1} name`}
+                  onBlur={(event) => editCalendar(i, { name: event.currentTarget.value })}
+                  onKeyDown={blurOnEnter}
+                  className={FIELD}
+                />
+                <button
+                  onClick={() => removeCalendar(i)}
+                  title="Remove"
+                  aria-label={`Remove ${calendar.name}`}
+                  className="cursor-pointer px-1 text-[10px] text-paradise-100/40 transition-colors hover:text-paradise-red"
+                >
+                  <FaTimes />
+                </button>
+                <input
+                  type="url"
+                  defaultValue={calendar.url}
+                  aria-label={`${calendar.name} iCal link`}
+                  spellCheck={false}
+                  onBlur={(event) => editCalendar(i, { url: event.currentTarget.value })}
+                  onKeyDown={blurOnEnter}
+                  className={clsx(FIELD, "col-span-2")}
+                />
               </div>
+            ))}
+            {settings.calendars.length < MAX_CALENDARS ? (
+              <div key={`new-${settings.calendars.length}`} className="grid gap-1">
+                <input
+                  ref={newCalendarNameRef}
+                  placeholder="Name"
+                  aria-label="New calendar name"
+                  onKeyDown={blurOnEnter}
+                  className={FIELD}
+                />
+                <input
+                  ref={newCalendarUrlRef}
+                  type="url"
+                  placeholder="Secret address in iCal format"
+                  aria-label="New calendar iCal link"
+                  spellCheck={false}
+                  onBlur={addCalendar}
+                  onKeyDown={blurOnEnter}
+                  className={FIELD}
+                />
+              </div>
+            ) : null}
+            <p className="text-[10px] leading-snug text-paradise-100/40">
+              Up to {MAX_CALENDARS}. Google Calendar → a calendar&apos;s settings →
+              Integrate calendar → Secret address in iCal format. Kept in this
+              browser only.
+            </p>
+            {calendarError ? (
+              <div className="text-[11px] text-paradise-red">{calendarError}</div>
             ) : null}
           </Section>
         </div>

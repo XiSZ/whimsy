@@ -6,6 +6,11 @@ export type BookmarkLayout = "tiles" | "strips";
 export type BookmarkLinkStyle = "full" | "icon";
 export type BookmarkAlignment = "vertical" | "horizontal";
 export type CalendarView = "week" | "month" | "year";
+
+export interface CalendarFeed {
+  name: string;
+  url: string;
+}
 export type WidgetKey =
   | "twitch"
   | "weather"
@@ -46,8 +51,9 @@ export interface AppSettings {
   // Bookmark group colors picked in Settings, by group key (see groupKey in
   // Bookmarks.tsx); groups without one keep their default.
   groupColors: Record<string, string>;
-  // Google Calendar iCal link whose events the calendar shows; "" for none.
-  calendarUrl: string;
+  // Google Calendars (iCal links) whose events the calendar shows, up to
+  // MAX_CALENDARS.
+  calendars: CalendarFeed[];
   calendarView: CalendarView;
   // Last place found for "Weather at my location"; null uses the configured
   // city (NEXT_PUBLIC_WEATHER_*).
@@ -70,18 +76,30 @@ const DEFAULTS: AppSettings = {
   glassBlur: 16,
   glassOpacity: 62,
   groupColors: {},
-  calendarUrl: "",
+  calendars: [],
   calendarView: "month",
   weatherPlace: null,
 };
+
+export const MAX_CALENDARS = 5;
+
+// Older saves kept a single `calendarUrl`; carry it over into `calendars`.
+export function migrateSettings(
+  stored: Partial<AppSettings> & { calendarUrl?: string },
+): Partial<AppSettings> {
+  const { calendarUrl, ...rest } = stored;
+  return calendarUrl && !rest.calendars
+    ? { ...rest, calendars: [{ name: "Calendar", url: calendarUrl }] }
+    : rest;
+}
 
 function readSettings(): AppSettings {
   try {
     return {
       ...DEFAULTS,
-      ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<
-        AppSettings
-      >),
+      ...migrateSettings(
+        JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}"),
+      ),
     };
   } catch {
     return DEFAULTS;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadCalendar } from "./calendarEvents";
+import { loadCalendar, mergeLookups } from "./calendarEvents";
 
 const ICS = [
   "BEGIN:VCALENDAR",
@@ -104,5 +104,33 @@ describe("loadCalendar", () => {
 
   it("lists all-day events first, then by start time", () => {
     expect(titles("2026-11-05")).toEqual(["Trip", "Daily"]);
+  });
+});
+
+describe("mergeLookups", () => {
+  it("combines several calendars per day, keeping the order", () => {
+    const work = [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:review",
+      "SUMMARY:Review",
+      "DTSTART:20261105T060000Z",
+      "DTEND:20261105T063000Z",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const merged = mergeLookups([
+      loadCalendar(ICS, "Europe/Berlin", 0),
+      loadCalendar(work, "Europe/Berlin", 1),
+    ])(new Date("2026-11-01T00:00:00Z"), new Date("2026-12-01T00:00:00Z"));
+
+    // Trip is all-day, Review (07:00 Berlin) comes before Daily (08:00).
+    expect(
+      merged.get("2026-11-05")?.map((event) => [event.title, event.source]),
+    ).toEqual([
+      ["Trip", 0],
+      ["Review", 1],
+      ["Daily", 0],
+    ]);
   });
 });

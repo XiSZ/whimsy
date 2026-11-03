@@ -5,10 +5,30 @@ export interface CalendarEvent {
   title: string;
   start: Date;
   allDay: boolean;
+  // Which of the configured calendars it came from (its index).
+  source: number;
 }
 
 // Events by "YYYY-MM-DD" day for the range [from, to).
 export type EventLookup = (from: Date, to: Date) => Map<string, CalendarEvent[]>;
+
+// All-day events first, then by start time.
+const byStart = (a: CalendarEvent, b: CalendarEvent) =>
+  Number(b.allDay) - Number(a.allDay) || a.start.getTime() - b.start.getTime();
+
+// One lookup over several calendars: their events merged per day, in order.
+export function mergeLookups(lookups: EventLookup[]): EventLookup {
+  return (from, to) => {
+    const days = new Map<string, CalendarEvent[]>();
+    for (const lookup of lookups) {
+      for (const [key, list] of lookup(from, to)) {
+        days.set(key, [...(days.get(key) ?? []), ...list]);
+      }
+    }
+    for (const list of days.values()) list.sort(byStart);
+    return days;
+  };
+}
 
 // shortcut: a series stops expanding after this many instances, far more than
 // a daily series reaching back decades needs; raise it if one ever stops short.
@@ -18,7 +38,11 @@ const DAY_MS = 86_400_000;
 // Parses an iCal feed and returns a lookup that expands recurring events for
 // the asked range, filing them under their days in `timeZone`. Runs in the
 // browser: a large calendar is too heavy for the edge function's CPU limit.
-export function loadCalendar(ics: string, timeZone: string): EventLookup {
+export function loadCalendar(
+  ics: string,
+  timeZone: string,
+  source = 0,
+): EventLookup {
   const calendar = new ICAL.Component(ICAL.parse(ics));
   // Without its VTIMEZONEs, TZID times would be read as floating local times.
   for (const zone of calendar.getAllSubcomponents("vtimezone")) {
@@ -60,6 +84,7 @@ export function loadCalendar(ics: string, timeZone: string): EventLookup {
         title: item.summary || "(No title)",
         start: new Date(startMs),
         allDay: start.isDate,
+        source,
       };
       // All-day ends are exclusive (ending on the 8th covers the 7th); a timed
       // event ending at midnight doesn't spill into the next day either.
@@ -92,13 +117,7 @@ export function loadCalendar(ics: string, timeZone: string): EventLookup {
       }
     }
 
-    for (const list of days.values()) {
-      list.sort(
-        (a, b) =>
-          Number(b.allDay) - Number(a.allDay) ||
-          a.start.getTime() - b.start.getTime(),
-      );
-    }
+    for (const list of days.values()) list.sort(byStart);
     return days;
   };
 }

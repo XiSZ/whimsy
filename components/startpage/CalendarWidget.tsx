@@ -61,7 +61,7 @@ export default function CalendarWidget() {
   const [cursor, setCursor] = useState(today);
   const [selected, setSelected] = useState<string | null>(null);
   const [lookup, setLookup] = useState<EventLookup | null>(null);
-  const [feedError, setFeedError] = useState(false);
+  const [failedFeeds, setFailedFeeds] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Keeps the highlight right in a tab left open past midnight.
@@ -70,34 +70,44 @@ export default function CalendarWidget() {
     return () => clearInterval(interval);
   }, []);
 
-  // The feed and the iCal parser load only once a Google Calendar link is set.
+  // The feeds and the iCal parser load only once a calendar is set; a feed
+  // that fails doesn't hide the others. Keyed by the links (names only label).
+  const feedUrls = settings.calendars.map((calendar) => calendar.url).join("\n");
   useEffect(() => {
     setLookup(null);
-    setFeedError(false);
-    if (!settings.calendarUrl) return;
+    setFailedFeeds(0);
+    if (!feedUrls) return;
+    const urls = feedUrls.split("\n");
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch("/api/calendar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: settings.calendarUrl }),
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const [ics, { loadCalendar }] = await Promise.all([
-          response.text(),
-          import("@/lib/calendarEvents"),
-        ]);
-        const next = loadCalendar(ics, APP_TIME_ZONE);
-        if (!cancelled) setLookup(() => next);
+        const { loadCalendar, mergeLookups } = await import("@/lib/calendarEvents");
+        const results = await Promise.allSettled(
+          urls.map(async (url, source) => {
+            const response = await fetch("/api/calendar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url }),
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return loadCalendar(await response.text(), APP_TIME_ZONE, source);
+          }),
+        );
+        if (cancelled) return;
+        const loaded = results.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : [],
+        );
+        setFailedFeeds(urls.length - loaded.length);
+        const next = mergeLookups(loaded);
+        setLookup(() => next);
       } catch {
-        if (!cancelled) setFeedError(true);
+        if (!cancelled) setFailedFeeds(urls.length);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [settings.calendarUrl]);
+  }, [feedUrls]);
 
   const [fromMs, toMs] = viewRange(view, cursor);
   const events = useMemo(
@@ -293,6 +303,12 @@ export default function CalendarWidget() {
                 </span>
                 <span className="min-w-0 break-words text-accent-text/90">
                   {event.title}
+                  {/* With several calendars, say which one it's from. */}
+                  {settings.calendars.length > 1 ? (
+                    <span className="block text-[10px] text-accent-text/45">
+                      {settings.calendars[event.source]?.name}
+                    </span>
+                  ) : null}
                 </span>
               </li>
             ))}
@@ -363,9 +379,11 @@ export default function CalendarWidget() {
         </div>
       ) : null}
 
-      {feedError ? (
+      {failedFeeds > 0 ? (
         <div className="mt-1 text-[10px] text-paradise-red">
-          Couldn&apos;t load your Google Calendar.
+          {settings.calendars.length === 1
+            ? "Couldn't load your Google Calendar."
+            : `Couldn't load ${failedFeeds} of ${settings.calendars.length} calendars.`}
         </div>
       ) : null}
     </div>

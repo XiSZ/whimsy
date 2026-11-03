@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { onAccentColor } from "./settings";
+import { migrateSettings, onAccentColor } from "./settings";
+
+describe("migrateSettings", () => {
+  it("moves a single saved calendar link into the list", () => {
+    expect(migrateSettings({ calendarUrl: "a", glassBlur: 4 })).toEqual({
+      calendars: [{ name: "Calendar", url: "a" }],
+      glassBlur: 4,
+    });
+  });
+
+  it("drops an empty old link and keeps an existing list", () => {
+    const calendars = [{ name: "Work", url: "b" }];
+    expect(migrateSettings({ calendarUrl: "" })).toEqual({});
+    expect(migrateSettings({ calendarUrl: "a", calendars })).toEqual({
+      calendars,
+    });
+  });
+});
 
 describe("onAccentColor", () => {
   it("puts dark text on light accents and white text on dark ones", () => {
