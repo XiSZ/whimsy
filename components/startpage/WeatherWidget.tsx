@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { IconType } from "react-icons/lib";
+import { readWeatherCache } from "@/lib/weatherCache";
+import { useAppSettings, type WeatherPlace } from "./settings";
 import {
   WiCloud,
   WiDaySunny,
@@ -136,25 +138,91 @@ function formatWeekday(date: string): string {
   });
 }
 
-const WEATHER_COORDS = {
-  lat: Number(process.env.NEXT_PUBLIC_WEATHER_LAT),
-  lon: Number(process.env.NEXT_PUBLIC_WEATHER_LON),
-};
+const CONFIGURED_PLACE: WeatherPlace | null = (() => {
+  const lat = Number(process.env.NEXT_PUBLIC_WEATHER_LAT);
+  const lon = Number(process.env.NEXT_PUBLIC_WEATHER_LON);
+  const label = process.env.NEXT_PUBLIC_WEATHER_LABEL;
+  return Number.isFinite(lat) && Number.isFinite(lon) && label
+    ? { lat, lon, label }
+    : null;
+})();
 
-const WEATHER_LABEL = process.env.NEXT_PUBLIC_WEATHER_LABEL;
+const UNNAMED_PLACE = "My location";
+
+// The browser's position rounded to ~1 km (keeps the forecast cache and the
+// city lookup stable while moving around a little) and its city name from
+// OpenStreetMap. Returns `known` itself when the rounded position is unchanged.
+export async function locatePlace(
+  known?: WeatherPlace | null,
+): Promise<WeatherPlace> {
+  const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      maximumAge: 30 * 60_000,
+      timeout: 15_000,
+    }),
+  );
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const lat = round(position.coords.latitude);
+  const lon = round(position.coords.longitude);
+  if (known?.lat === lat && known.lon === lon && known.label !== UNNAMED_PLACE) {
+    return known;
+  }
+
+  let label = UNNAMED_PLACE;
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=en&lat=${lat}&lon=${lon}`,
+    );
+    const data = await response.json();
+    const name = [
+      data?.address?.city,
+      data?.address?.town,
+      data?.address?.village,
+      data?.name,
+    ].find((value) => typeof value === "string" && value);
+    if (name) label = name;
+  } catch {
+    // No name — the forecast still works.
+  }
+  return { lat, lon, label };
+}
+
 const WEATHER_REFRESH_MINUTES = Number(
   process.env.NEXT_PUBLIC_WEATHER_REFRESH_MINUTES,
 );
 
+// The last forecast, so a new tab shows the weather instantly instead of
+// waiting on (and re-calling) the API.
+const WEATHER_CACHE_KEY = "whimsy-weather";
+
 export default function WeatherWidget() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [hasError, setHasError] = useState(false);
   const [view, setView] = useState<"daily" | "three-day">("daily");
+  const [settings, update] = useAppSettings();
+  const place = settings.weatherPlace ?? CONFIGURED_PLACE;
+  const lat = place?.lat;
+  const lon = place?.lon;
+  const hasValidConfig = place !== null;
 
-  const hasValidConfig =
-    Number.isFinite(WEATHER_COORDS.lat) &&
-    Number.isFinite(WEATHER_COORDS.lon) &&
-    Boolean(WEATHER_LABEL);
+  // Follow the browser when it moves; the stored place shows meanwhile. A
+  // denied or failed lookup just keeps the last place.
+  const storedPlace = settings.weatherPlace;
+  const storedLat = storedPlace?.lat;
+  const storedLon = storedPlace?.lon;
+  const storedLabel = storedPlace?.label;
+  useEffect(() => {
+    if (storedLat === undefined) return;
+    let cancelled = false;
+    const known = { lat: storedLat, lon: storedLon, label: storedLabel };
+    locatePlace(known)
+      .then((next) => {
+        if (!cancelled && next !== known) update({ weatherPlace: next });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [storedLat, storedLon, storedLabel, update]);
 
   const refreshIntervalMs =
     Number.isFinite(WEATHER_REFRESH_MINUTES) && WEATHER_REFRESH_MINUTES >= 10
@@ -163,14 +231,26 @@ export default function WeatherWidget() {
 
   const endpoint = useMemo(
     () =>
-      `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_COORDS.lat}&longitude=${WEATHER_COORDS.lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3`,
-    [],
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3`,
+    [lat, lon],
   );
 
   useEffect(() => {
     if (!hasValidConfig) return;
 
     let cancelled = false;
+
+    let cached: { data: WeatherData; fresh: boolean } | null = null;
+    try {
+      cached = readWeatherCache<WeatherData>(
+        localStorage.getItem(WEATHER_CACHE_KEY),
+        endpoint,
+        refreshIntervalMs,
+      );
+    } catch {
+      // Storage unavailable — fetch as usual.
+    }
+    if (cached) setWeather(cached.data);
 
     const update = async () => {
       try {
@@ -200,21 +280,29 @@ export default function WeatherWidget() {
             tempMax: Number(maxs[index] ?? 0),
           }));
 
-        setWeather({
+        const next: WeatherData = {
           temperature: Number(data?.current?.temperature_2m ?? 0),
           weatherCode: Number(data?.current?.weather_code ?? 0),
           isDay: Number(data?.current?.is_day ?? 1) === 1,
           tempMin: Number(forecast[0]?.tempMin ?? 0),
           tempMax: Number(forecast[0]?.tempMax ?? 0),
           forecast,
-        });
-        setHasError(false);
+        };
+        setWeather(next);
+        try {
+          localStorage.setItem(
+            WEATHER_CACHE_KEY,
+            JSON.stringify({ at: Date.now(), endpoint, data: next }),
+          );
+        } catch {
+          // Storage unavailable — the next tab just fetches again.
+        }
       } catch {
-        if (!cancelled) setHasError(true);
+        // Keep showing the last forecast; the next interval retries.
       }
     };
 
-    update();
+    if (!cached?.fresh) update();
     const interval = setInterval(update, refreshIntervalMs);
 
     return () => {
@@ -233,7 +321,7 @@ export default function WeatherWidget() {
     return () => clearInterval(rotation);
   }, [weather]);
 
-  if (!hasValidConfig || hasError || !weather) return null;
+  if (!hasValidConfig || !weather) return null;
 
   const currentWeather = weatherCodeToPresentation(
     weather.weatherCode,
@@ -244,7 +332,7 @@ export default function WeatherWidget() {
     <div className="md:fixed md:top-4 md:right-4 md:z-20 w-full md:w-[240px] rounded-xl border border-[#2d2d2d]/70 bg-[#161616]/62 px-3 py-2 backdrop-blur-lg backdrop-saturate-150 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards]">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] uppercase tracking-wide text-paradise-200/75">
-          {WEATHER_LABEL}
+          {place.label}
         </div>
         <div className="text-[10px] uppercase tracking-wide text-paradise-100/70">
           {view === "daily" ? "Now" : "3-day forecast"}

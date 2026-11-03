@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 export type BookmarkLayout = "tiles" | "strips";
+export type WidgetKey = "twitch" | "weather" | "todo" | "progress";
+
+export interface WeatherPlace {
+  lat: number;
+  lon: number;
+  label: string;
+}
 
 export interface AppSettings {
   openInNewTab: boolean;
@@ -15,7 +22,16 @@ export interface AppSettings {
   // "custom" shows the user's own image/video (kept in IndexedDB, see
   // components/background/backgroundFile.ts) instead of the gradient.
   backgroundMode: "gradient" | "custom";
+  // CSS object-position of the custom background: the point kept in view
+  // when it is cropped to the screen.
+  backgroundPosition: string;
   bookmarkLayout: BookmarkLayout;
+  hiddenWidgets: WidgetKey[];
+  // Backdrop blur of the glass panels, in px.
+  glassBlur: number;
+  // Last place found for "Weather at my location"; null uses the configured
+  // city (NEXT_PUBLIC_WEATHER_*).
+  weatherPlace: WeatherPlace | null;
 }
 
 const SETTINGS_KEY = "whimsy-settings";
@@ -26,7 +42,11 @@ const DEFAULTS: AppSettings = {
   accentColor: null,
   backgroundColor: null,
   backgroundMode: "gradient",
+  backgroundPosition: "50% 50%",
   bookmarkLayout: "tiles",
+  hiddenWidgets: [],
+  glassBlur: 16,
+  weatherPlace: null,
 };
 
 function readSettings(): AppSettings {
@@ -62,6 +82,12 @@ export function applyBookmarkLayout(layout: BookmarkLayout) {
   document.documentElement.dataset.bookmarks = layout;
 }
 
+// Every glass panel uses Tailwind's `backdrop-blur-lg`, which reads the
+// `--blur-lg` theme variable (mirrored by the same inline script).
+export function applyGlassBlur(px: number) {
+  document.documentElement.style.setProperty("--blur-lg", `${px}px`);
+}
+
 // localStorage-backed settings shared across components; a window event
 // keeps every subscriber in sync within the same tab. `loaded` turns true once
 // the stored values have been read (the first render always sees DEFAULTS).
@@ -81,7 +107,8 @@ export function useAppSettings(): [
     return () => window.removeEventListener(SETTINGS_EVENT, sync);
   }, []);
 
-  const update = (patch: Partial<AppSettings>) => {
+  // Stable (it reads storage, not state), so effects can depend on it.
+  const update = useCallback((patch: Partial<AppSettings>) => {
     try {
       localStorage.setItem(
         SETTINGS_KEY,
@@ -92,10 +119,25 @@ export function useAppSettings(): [
     }
     if (patch.accentColor !== undefined) applyAccentColor(patch.accentColor);
     if (patch.bookmarkLayout) applyBookmarkLayout(patch.bookmarkLayout);
+    if (patch.glassBlur !== undefined) applyGlassBlur(patch.glassBlur);
     window.dispatchEvent(new Event(SETTINGS_EVENT));
-  };
+  }, []);
 
   return [settings, update, loaded];
+}
+
+// Renders a widget unless it is switched off in Settings → Widgets. Renders
+// nothing until the settings are read, so a hidden widget never mounts (and
+// never polls its API).
+export function ShowWidget({
+  name,
+  children,
+}: {
+  name: WidgetKey;
+  children: ReactNode;
+}) {
+  const [settings, , loaded] = useAppSettings();
+  return loaded && !settings.hiddenWidgets.includes(name) ? children : null;
 }
 
 // Spread onto twitch.tv anchors: new tab or same tab per the setting.
