@@ -20,12 +20,14 @@ import {
 import {
   useAppSettings,
   type AppSettings,
+  type BookmarkAlignment,
   type BookmarkLayout,
   type BookmarkLinkStyle,
   type WidgetKey,
 } from "./settings";
 import { locatePlace } from "./WeatherWidget";
 import { categories, groupKey } from "./Bookmarks";
+import { isGoogleIcsUrl } from "@/lib/calendar";
 
 // Shown while no custom accent is set (the progress-bar orange).
 const DEFAULT_ACCENT = "#ff9b3f";
@@ -48,6 +50,11 @@ const LAYOUT_OPTIONS: { value: BookmarkLayout; label: string }[] = [
 const LINK_STYLE_OPTIONS: { value: BookmarkLinkStyle; label: string }[] = [
   { value: "full", label: "Icon + text" },
   { value: "icon", label: "Icon" },
+];
+
+const ALIGNMENT_OPTIONS: { value: BookmarkAlignment; label: string }[] = [
+  { value: "vertical", label: "Vertical" },
+  { value: "horizontal", label: "Horizontal" },
 ];
 
 type BackgroundMode = AppSettings["backgroundMode"];
@@ -295,6 +302,19 @@ export default function SettingsPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [calendarUrlError, setCalendarUrlError] = useState<string | null>(null);
+
+  // Saved on blur/Enter, not per keystroke, so the feed isn't fetched for
+  // every partial link; an empty field turns the events off.
+  const saveCalendarUrl = (value: string) => {
+    const url = value.trim();
+    if (url && !isGoogleIcsUrl(url)) {
+      setCalendarUrlError("That isn't a Google Calendar iCal link.");
+      return;
+    }
+    setCalendarUrlError(null);
+    if (url !== settings.calendarUrl) update({ calendarUrl: url });
+  };
 
   // Turning it on asks for the location right away (the browser prompts on
   // this click); the switch only flips once a place was found.
@@ -441,6 +461,20 @@ export default function SettingsPanel() {
                 onChange={(style) => update({ bookmarkLinkStyle: style })}
               />
             </div>
+            {/* Strips are rows by nature, so alignment only applies to tiles. */}
+            {settings.bookmarkLayout === "tiles" ? (
+              <div className="flex items-center justify-between gap-2 text-sm text-paradise-100/85">
+                Alignment
+                <Segmented
+                  label="Bookmark alignment"
+                  value={settings.bookmarkAlignment}
+                  options={ALIGNMENT_OPTIONS}
+                  onChange={(alignment) =>
+                    update({ bookmarkAlignment: alignment })
+                  }
+                />
+              </div>
+            ) : null}
             <label className="flex items-center justify-between gap-3 text-sm text-paradise-100/85">
               Glass blur
               <input
@@ -523,6 +557,30 @@ export default function SettingsPanel() {
             />
             {locationError ? (
               <div className="text-[11px] text-paradise-red">{locationError}</div>
+            ) : null}
+            <label className="grid gap-1 text-sm text-paradise-100/85">
+              Google Calendar
+              <input
+                key={settings.calendarUrl}
+                type="url"
+                defaultValue={settings.calendarUrl}
+                placeholder="Secret address in iCal format"
+                spellCheck={false}
+                onBlur={(event) => saveCalendarUrl(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur();
+                }}
+                className="w-full rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-100 outline-none transition-colors placeholder:text-paradise-100/35 focus:border-paradise-300/60"
+              />
+            </label>
+            <p className="text-[10px] leading-snug text-paradise-100/40">
+              Google Calendar → your calendar&apos;s settings → Integrate calendar →
+              Secret address in iCal format. Kept in this browser only.
+            </p>
+            {calendarUrlError ? (
+              <div className="text-[11px] text-paradise-red">
+                {calendarUrlError}
+              </div>
             ) : null}
           </Section>
         </div>

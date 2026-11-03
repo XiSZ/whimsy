@@ -61,6 +61,8 @@ html {
 @custom-variant strips (&:where([data-bookmarks="strips"] *));
 /* Settings → Links: `icon-only:` styles apply when bookmarks show icons only. */
 @custom-variant icon-only (&:where([data-bookmark-links="icon"] *));
+/* Settings → Alignment: `links-row:` styles apply when tiles lay links in a row. */
+@custom-variant links-row (&:where([data-bookmark-align="horizontal"] *));
 
 /* --- Keyframes --- */
 @keyframes fadeIn {

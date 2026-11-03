@@ -1,5 +1,63 @@
 import { describe, expect, it } from "vitest";
-import { isoWeek, monthDays } from "./calendar";
+import {
+  addDays,
+  isGoogleIcsUrl,
+  isoWeek,
+  monthDays,
+  startOfWeek,
+} from "./calendar";
+
+describe("startOfWeek", () => {
+  it("goes back to Monday, across month and year ends", () => {
+    expect(startOfWeek({ year: 2026, month: 10, day: 8 })).toEqual({
+      year: 2026,
+      month: 10,
+      day: 2,
+    }); // Sunday → Monday before
+    expect(startOfWeek({ year: 2027, month: 0, day: 1 })).toEqual({
+      year: 2026,
+      month: 11,
+      day: 28,
+    });
+    expect(startOfWeek({ year: 2026, month: 10, day: 2 }).day).toBe(2); // a Monday
+  });
+
+  it("adds days across month ends", () => {
+    expect(addDays({ year: 2026, month: 10, day: 30 }, 1)).toEqual({
+      year: 2026,
+      month: 11,
+      day: 1,
+    });
+  });
+});
+
+describe("isGoogleIcsUrl", () => {
+  it("accepts secret and public Google Calendar iCal links", () => {
+    expect(
+      isGoogleIcsUrl(
+        "https://calendar.google.com/calendar/ical/me%40gmail.com/private-abc123/basic.ics",
+      ),
+    ).toBe(true);
+    expect(
+      isGoogleIcsUrl(
+        "https://calendar.google.com/calendar/ical/de.german%23holiday%40group.v.calendar.google.com/public/basic.ics",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects anything that could fetch elsewhere", () => {
+    for (const url of [
+      "http://calendar.google.com/calendar/ical/x/basic.ics",
+      "https://calendar.google.com.evil.example/calendar/ical/x/basic.ics",
+      "https://calendar.google.com:8443/calendar/ical/x/basic.ics",
+      "https://user@calendar.google.com/calendar/ical/x/basic.ics",
+      "https://calendar.google.com/calendar/embed?src=x",
+      "not a url",
+    ]) {
+      expect(isGoogleIcsUrl(url), url).toBe(false);
+    }
+  });
+});
 
 describe("isoWeek", () => {
   it("numbers weeks from the one holding the first Thursday", () => {

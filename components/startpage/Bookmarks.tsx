@@ -202,14 +202,14 @@ export default function Bookmarks() {
         {categories.map((category, i) => (
           <Card
             key={category.title}
-            className="animate-stagger-in min-h-[160px] md:min-h-[180px] icon-only:min-h-0!"
+            className="animate-stagger-in min-h-[160px] md:min-h-[180px] links-row:min-h-0!"
             style={groupStyle(category, i)}
           >
             <div className="text-lg text-(--group) mb-1 text-center md:text-left">
               {category.title}
             </div>
 
-            <div className="flex flex-col gap-2 items-center md:items-start justify-center md:justify-start icon-only:flex-row icon-only:flex-wrap icon-only:gap-4 icon-only:pt-1">
+            <div className="flex flex-col gap-2 items-center md:items-start justify-center md:justify-start links-row:flex-row links-row:flex-wrap links-row:gap-x-4 links-row:gap-y-2 icon-only:pt-1">
               {category.links.map((link) => (
                 <a
                   key={link.url}
@@ -220,13 +220,13 @@ export default function Bookmarks() {
                     dim(link) && "opacity-30",
                   )}
                 >
-                  <span className="hidden md:block absolute -left-1 opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0 transition-all duration-200 text-(--group) animate-page-in icon-only:hidden!">
+                  <span className="hidden md:block absolute -left-1 opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0 transition-all duration-200 text-(--group) animate-page-in icon-only:hidden! links-row:hidden!">
                     <FaAngleRight className="w-3 h-3" />
                   </span>
 
                   <span
                     className={clsx(
-                      "flex items-center gap-2 transition-colors transition-transform duration-200 transform group-hover:text-paradise-200 md:group-hover:translate-x-3 icon-only:translate-x-0! icon-only:group-hover:scale-125",
+                      "flex items-center gap-2 transition-colors transition-transform duration-200 transform group-hover:text-paradise-200 md:group-hover:translate-x-3 icon-only:translate-x-0! links-row:translate-x-0! icon-only:group-hover:scale-125",
                       hit(link)
                         ? "font-medium text-(--group)"
                         : "text-paradise-100/85",
@@ -244,15 +244,17 @@ export default function Bookmarks() {
 
       {/* Separate strips that share one grid: each strip is a subgrid, so
           titles and links line up in columns across all of them. Narrow
-          screens scroll the whole stack sideways instead of wrapping. */}
+          screens scroll the whole stack sideways instead of wrapping. With
+          icons only, a strip packs them after a fixed-width title instead
+          (equal-sized icons still line up, without the wide columns). */}
       <div className="hidden strips:grid w-full overflow-x-auto [scrollbar-width:none] grid-cols-[auto_repeat(4,minmax(max-content,1fr))] gap-x-4 gap-y-2">
         {categories.map((category, i) => (
           <Card
             key={category.title}
-            className="animate-stagger-in col-span-5 grid! grid-cols-subgrid items-center px-4 py-2.5"
+            className="animate-stagger-in col-span-5 grid! grid-cols-subgrid items-center px-4 py-2.5 icon-only:flex! icon-only:flex-row icon-only:gap-5"
             style={groupStyle(category, i)}
           >
-            <div className="whitespace-nowrap pr-2 text-[11px] uppercase tracking-wide text-(--group)">
+            <div className="whitespace-nowrap pr-2 text-[11px] uppercase tracking-wide text-(--group) icon-only:w-20 icon-only:shrink-0">
               {category.title}
             </div>
             {category.links.map((link) => (

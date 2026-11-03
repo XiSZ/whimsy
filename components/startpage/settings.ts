@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 export type BookmarkLayout = "tiles" | "strips";
 export type BookmarkLinkStyle = "full" | "icon";
+export type BookmarkAlignment = "vertical" | "horizontal";
+export type CalendarView = "week" | "month" | "year";
 export type WidgetKey =
   | "twitch"
   | "weather"
@@ -34,12 +36,17 @@ export interface AppSettings {
   bookmarkLayout: BookmarkLayout;
   // "icon" shows bookmarks as their site icon only (name as tooltip).
   bookmarkLinkStyle: BookmarkLinkStyle;
+  // How tiles lay out their links: stacked, or in a wrapping row.
+  bookmarkAlignment: BookmarkAlignment;
   hiddenWidgets: WidgetKey[];
   // Backdrop blur of the glass panels, in px.
   glassBlur: number;
   // Bookmark group colors picked in Settings, by group key (see groupKey in
   // Bookmarks.tsx); groups without one keep their default.
   groupColors: Record<string, string>;
+  // Google Calendar iCal link whose events the calendar shows; "" for none.
+  calendarUrl: string;
+  calendarView: CalendarView;
   // Last place found for "Weather at my location"; null uses the configured
   // city (NEXT_PUBLIC_WEATHER_*).
   weatherPlace: WeatherPlace | null;
@@ -56,9 +63,12 @@ const DEFAULTS: AppSettings = {
   backgroundPosition: "50% 50%",
   bookmarkLayout: "tiles",
   bookmarkLinkStyle: "full",
+  bookmarkAlignment: "vertical",
   hiddenWidgets: [],
   glassBlur: 16,
   groupColors: {},
+  calendarUrl: "",
+  calendarView: "month",
   weatherPlace: null,
 };
 
@@ -98,6 +108,11 @@ export function applyBookmarkLayout(layout: BookmarkLayout) {
 // Same idea for `data-bookmark-links` (the `icon-only:` variant).
 export function applyBookmarkLinkStyle(style: BookmarkLinkStyle) {
   document.documentElement.dataset.bookmarkLinks = style;
+}
+
+// And `data-bookmark-align` (the `links-row:` variant).
+export function applyBookmarkAlignment(alignment: BookmarkAlignment) {
+  document.documentElement.dataset.bookmarkAlign = alignment;
 }
 
 // Every glass panel uses Tailwind's `backdrop-blur-lg`, which reads the
@@ -150,6 +165,7 @@ export function useAppSettings(): [
     if (patch.accentColor !== undefined) applyAccentColor(patch.accentColor);
     if (patch.bookmarkLayout) applyBookmarkLayout(patch.bookmarkLayout);
     if (patch.bookmarkLinkStyle) applyBookmarkLinkStyle(patch.bookmarkLinkStyle);
+    if (patch.bookmarkAlignment) applyBookmarkAlignment(patch.bookmarkAlignment);
     if (patch.glassBlur !== undefined) applyGlassBlur(patch.glassBlur);
     if (patch.groupColors) applyGroupColors(patch.groupColors);
     window.dispatchEvent(new Event(SETTINGS_EVENT));
