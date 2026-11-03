@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -232,14 +233,26 @@ export default function TwitchWidget() {
     };
   }, [refreshMs]);
 
-  const visibleChannels = showAllChannels
-    ? channels
-    : channels.slice(0, clamp(maxChannels, 1, MAX_CHANNELS_CAP));
-
-  const canExpand = channels.length > clamp(maxChannels, 1, MAX_CHANNELS_CAP);
+  const visibleCount = clamp(maxChannels, 1, MAX_CHANNELS_CAP);
+  const canExpand = channels.length > visibleCount;
 
   const listRef = useRef<HTMLDivElement>(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(false);
+
+  // Collapsed, the list is as tall as its first `visibleCount` rows and
+  // scrolls to the rest; "Show all" lifts that cap. Measured, since a row's
+  // height comes from its two text lines.
+  const [rowsHeight, setRowsHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const rows = listRef.current?.children;
+    const first = rows?.[0] as HTMLElement | undefined;
+    const last = rows?.[visibleCount - 1] as HTMLElement | undefined;
+    setRowsHeight(
+      !showAllChannels && first && last
+        ? last.offsetTop + last.offsetHeight - first.offsetTop
+        : null,
+    );
+  }, [channels, visibleCount, showAllChannels]);
 
   const updateFade = useCallback(() => {
     const el = listRef.current;
@@ -252,7 +265,7 @@ export default function TwitchWidget() {
     updateFade();
     window.addEventListener("resize", updateFade);
     return () => window.removeEventListener("resize", updateFade);
-  }, [visibleChannels, updateFade]);
+  }, [channels, rowsHeight, updateFade]);
 
   const handleRefreshSecondsChange = (seconds: number) => {
     const value = clamp(seconds, 30, 600);
@@ -417,8 +430,13 @@ export default function TwitchWidget() {
               ref={listRef}
               onScroll={updateFade}
               className="twitch-scroll grid max-h-[calc(100dvh-330px)] gap-1 overflow-y-auto"
+              style={
+                rowsHeight === null
+                  ? undefined
+                  : { maxHeight: `min(${rowsHeight}px, calc(100dvh - 330px))` }
+              }
             >
-              {visibleChannels.map((channel) => (
+              {channels.map((channel) => (
                 <a
                   key={channel.login}
                   href={`https://twitch.tv/${channel.login}`}
@@ -449,7 +467,7 @@ export default function TwitchWidget() {
               className="rounded-md border border-[#2d2d2d]/80 bg-black/20 px-2 py-1 text-xs text-paradise-200/70 transition-colors hover:bg-black/30 hover:text-paradise-200/90"
             >
               {showAllChannels
-                ? `Show less (${clamp(maxChannels, 1, MAX_CHANNELS_CAP)})`
+                ? `Show less (${visibleCount})`
                 : `Show all (${channels.length})`}
             </button>
           ) : null}
