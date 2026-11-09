@@ -205,7 +205,9 @@ export default function WeatherWidget() {
   const hasValidConfig = place !== null;
 
   // Follow the browser when it moves; the stored place shows meanwhile. A
-  // denied or failed lookup just keeps the last place.
+  // denied or failed lookup just keeps the last place. Only when access is
+  // already granted: asking here would prompt on every new tab (the settings
+  // switch is where the prompt belongs).
   const storedPlace = settings.weatherPlace;
   const storedLat = storedPlace?.lat;
   const storedLon = storedPlace?.lon;
@@ -214,11 +216,12 @@ export default function WeatherWidget() {
     if (storedLat === undefined) return;
     let cancelled = false;
     const known = { lat: storedLat, lon: storedLon, label: storedLabel };
-    locatePlace(known)
-      .then((next) => {
-        if (!cancelled && next !== known) update({ weatherPlace: next });
-      })
-      .catch(() => {});
+    (async () => {
+      const access = await navigator.permissions?.query({ name: "geolocation" });
+      if (access?.state !== "granted") return;
+      const next = await locatePlace(known);
+      if (!cancelled && next !== known) update({ weatherPlace: next });
+    })().catch(() => {});
     return () => {
       cancelled = true;
     };
