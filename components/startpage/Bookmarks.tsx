@@ -53,6 +53,11 @@ export const categories: BookmarkCategory[] = [
         url: "https://www.myfritz.net/devices/#/",
         icon: "fritz.com",
       },
+      {
+        label: "Cloudflare Pages",
+        // `:account` lets the dashboard pick the signed-in account.
+        url: "https://dash.cloudflare.com/?to=/:account/workers-and-pages",
+      },
     ],
   },
   {
